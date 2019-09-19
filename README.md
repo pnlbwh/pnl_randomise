@@ -6,11 +6,17 @@ FSL randomise scripts
 
 write up `README.md`
 
-## randomise_summary.py
+Table of Contents
+=================
+    * [randomise_summary.py](#randomise_summary.py)
+    * [merge_images_and_make_design.py](#merge_images_and_make_design.py)
+
+
+# randomise_summary.py
 
 Summarizes randomise output.
 
-### Usage
+## Usage
 
 ```sh
 usage: randomise_summary.py [-h] [--directory DIRECTORY]
@@ -50,7 +56,7 @@ Kevin Cho Thursday, August 22, 2019
 
 
 
-### Example output
+## Example output
 ```
 [kc244@rgs09:/data/pnl/kcho/Lupus/TBSS/final/ANOVA]$ python /data/pnl/kcho/PNLBWH/fsl_randomise/randomise_summary.py
 /data/pnl/kcho/Lupus/TBSS/final/ANOVA None None
