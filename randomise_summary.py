@@ -284,9 +284,9 @@ class CorrpMap(RandomiseRun):
         # total number of voxels in the skeleton
         self.vox_num_total = np.count_nonzero(self.corrp_data)
 
-        # number of significant voxels
+        # number of significant voxels: greater or equal to 0.95 by default
         self.significant_voxel_num = \
-                np.count_nonzero(self.corrp_data > self.threshold)
+                np.count_nonzero(self.corrp_data >= self.threshold)
 
         # number of significant voxels / number of all voxels
         self.significant_voxel_percentage = \
@@ -294,7 +294,7 @@ class CorrpMap(RandomiseRun):
                 * 100
 
         # summary of significant voxels
-        sig_vox_array = self.corrp_data[self.corrp_data > self.threshold]
+        sig_vox_array = self.corrp_data[self.corrp_data >= self.threshold]
         self.significant_voxel_mean = 1 - sig_vox_array.mean()
         self.significant_voxel_std = sig_vox_array.std()
         self.significant_voxel_max = 1 - sig_vox_array.max()
@@ -308,36 +308,37 @@ class CorrpMap(RandomiseRun):
 
         # Few voxels from ENIGMA template skeleton spreads into the area
         # defined as a gray matter by Harvard Oxford atlas
-        left_wm_mask = np.where((HO_data==1) + (HO_data==2), 1, 0)
-        left_skeleton_values = \
+        left_mask_array = np.where((HO_data==1) + (HO_data==2), 1, 0)
+        left_skeleton_array = \
                 self.corrp_data \
                 * np.where(self.corrp_data!=0, 1, 0) \
-                * left_wm_mask
-        right_wm_mask = np.where((HO_data==12) + (HO_data==13), 1, 0)
-        right_skeleton_values = \
+                * left_mask_array
+        print(left_skeleton_values.mean())
+        right_mask_array = np.where((HO_data==12) + (HO_data==13), 1, 0)
+        right_skeleton_array = \
                 self.corrp_data \
                 * np.where(self.corrp_data!=0, 1, 0) \
-                * right_wm_mask
+                * right_mask_array
 
         # count significant voxels in each hemispheres
         self.significant_voxel_left_num = np.count_nonzero(
-            left_skeleton_values > self.threshold)
+            left_skeleton_array >= self.threshold)
         self.significant_voxel_right_num = np.count_nonzero(
-            right_skeleton_values > self.threshold)
+            right_skeleton_array >= self.threshold)
 
-        if np.count_nonzero(left_skeleton_values) == 0:
+        if np.count_nonzero(left_skeleton_array) == 0:
             self.significant_voxel_left_percent = 0
         else:
             self.significant_voxel_left_percent = (
                 self.significant_voxel_left_num / \
-                np.count_nonzero(left_skeleton_values)) * 100
+                np.count_nonzero(left_skeleton_array)) * 100
 
-        if np.count_nonzero(right_skeleton_values) == 0:
+        if np.count_nonzero(right_skeleton_array) == 0:
             self.significant_voxel_right_percent = 0
         else:
             self.significant_voxel_right_percent = (
                 self.significant_voxel_right_num / \
-                np.count_nonzero(right_skeleton_values)) * 100
+                np.count_nonzero(right_skeleton_array)) * 100
 
 
     def make_df(self):
