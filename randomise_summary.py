@@ -21,6 +21,7 @@ pd.set_option('mode.chained_assignment', None)
 '''
 TODO:
     - Test
+    - Save summary outputs in pdf, csv or excel?
     - TODO add interaction information (group info to the get_contrast_info_english)
     - Check whether StringIO.io is used
     - Documentation
@@ -72,8 +73,15 @@ class RandomiseRun:
                  matrix_file='design.mat'):
         # define inputs
         self.location = Path(location)
-        self.matrix_file = Path(matrix_file)
-        self.contrast_file = Path(contrast_file)
+        if matrix_file == 'design.mat':
+            self.matrix_file = self.location / matrix_file
+        else:
+            self.matrix_file = Path(matrix_file)
+
+        if contrast_file == 'design.con':
+            self.contrast_file = self.location / contrast_file
+        else:
+            self.contrast_file = Path(contrast_file)
 
     def get_contrast_info(self):
         """Read design contrast file into a numpy array
@@ -301,8 +309,8 @@ class CorrpMap(RandomiseRun):
             self.threshold = self.threshold - 0.00001
             print('There are voxels with p value between 0.9495 and 0.05. '\
                   'These numbers are rounded up in FSL to 0.95. Threfore '\
-                  'to match to the FSL ways, changing the threshold to '\
-                  'threshold - 0.00001')
+                  'to match to the FSL outputs, changing the threshold to '\
+                  '(threshold - 0.00001)')
 
         # any voxels significant?
         if (data >= self.threshold).any():
@@ -378,9 +386,9 @@ class CorrpMap(RandomiseRun):
                 'Modality':self.modality,
                 'Stat num':self.stat_num,
                 'Significance':self.significant,
-                'Max P':self.voxel_max_p,
-                'Sig mean':self.significant_voxel_mean,
-                'Sig std':self.significant_voxel_std,
+                'Sig Max':self.voxel_max_p,
+                'Sig Mean':self.significant_voxel_mean,
+                'Sig Std':self.significant_voxel_std,
                 '% significant voxels':self.significant_voxel_percentage,
                 '% left':self.significant_voxel_left_percent,
                 '% right':self.significant_voxel_right_percent
@@ -398,7 +406,7 @@ class CorrpMap(RandomiseRun):
                 'Modality':self.modality,
                 'Stat num':self.stat_num,
                 'Significance':self.significant,
-                'Max P':self.voxel_max_p,
+                'Sig Max':self.voxel_max_p,
             })
 
     def update_with_contrast(self):
@@ -433,9 +441,10 @@ class CorrpMap(RandomiseRun):
                 self.df['contrast'] = 'f-test'
 
         # Reorder self.df to have file name and the contrast on the left
-        self.df = self.df[['file name', 'contrast'] + \
+        self.df = self.df[['file name', 'contrast', 'contrast_text'] + \
                 [x for x in self.df.columns if not x in ['file name',
-                                                         'contrast']]]
+                                                         'contrast',
+                                                         'contrast_text']]]
         return self.df
 
     def update_with_4d_data(self):
@@ -682,7 +691,6 @@ if __name__ == '__main__':
 
     argparser.add_argument("--merged_img_dir", "-p",
                            type=str,
-                           default=os.getcwd(),
                            help='Directory that contains merged files')
 
     argparser.add_argument("--atlasquery","-a",
@@ -695,6 +703,8 @@ if __name__ == '__main__':
 
     args = argparser.parse_args()
 
+    if not args.merged_img_dir:
+        args.merged_img_dir = args.directory
     # if separate corrp image is given
     if args.input:
         corrpMaps = [Path(x) for x in args.input]
@@ -748,6 +758,7 @@ if __name__ == '__main__':
             if corrpMap.significant:
                 print('-'*80)
                 print(corrpMap.name)
+                print(corrpMap.modality)
                 # find merged_4d_file
                 merged_4d_file = list(Path(args.merged_img_dir).glob(
                     f'*all*_{corrpMap.modality}[_.]*nii.gz'))[0]
@@ -760,7 +771,7 @@ if __name__ == '__main__':
         # if any of corrp map had significant voxels 
         try:
             values_df = pd.concat([values_df, 
-                                   corrpMap.matrix_df], 
+                                   randomiseRun.matrix_df], 
                                   axis=1)
             values_df.to_csv(
                 f'{randomiseRun.location}/values_extracted_for_all_subjects.csv'
@@ -769,7 +780,14 @@ if __name__ == '__main__':
                   'values_extracted_for_all_subjects.csv is created.')
         # if none of corrp map had significant voxels
         except:
-            pass
+            values_df.to_csv(
+                f'{randomiseRun.location}/values_extracted_for_all_subjects.csv'
+            )
+            print(f'{randomiseRun.location}/'\
+                  'values_extracted_for_all_subjects.csv is created.')
+
+        values_df.index = [f'subject {x+1}' for x in values_df.index]
+        print_df(values_df)
 
     df = pd.concat([x.df for x in corrp_map_classes], sort=False)
     df = df.sort_values('file name')
