@@ -811,13 +811,6 @@ if __name__ == '__main__':
                 corrpMap.get_atlas_query()
                 print_df(corrpMap.df_query)
 
-    #if args.merged_4d_file:
-        ## select significant rows from the the df
-        #df_significant = df[df.Significance == True]
-
-        #for file_name in
-        #print_df(df_significant)
-
     # If figure option is on
     if args.figure:
         print_head('Saving figures')
