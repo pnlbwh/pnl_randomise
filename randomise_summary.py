@@ -267,14 +267,24 @@ class CorrpMap(RandomiseRun):
         """Check whether there is any significant voxel"""
         img = nb.load(str(self.location))
         data = img.get_data()
+        #data = np.around(data, decimals=6)
 
         # max p-value
         self.voxel_max_p = data.max()
+
+        # Discrepancy between numpy and FSL
+        if len(data[(data < 0.95) & (data > 0.9495)]) != 0:
+            self.threshold = self.threshold - 0.00001
+            print('There are voxels with p value between 0.9495 and 0.05. '\
+                  'These numbers are rounded up in FSL to 0.95. Threfore '\
+                  'to match to the FSL ways, changing the threshold to '\
+                  'threshold - 0.00001')
 
         # any voxels significant?
         if (data > self.threshold).any():
             self.significant = True
             self.corrp_data = data
+
         else:
             self.significant = False
 
@@ -309,21 +319,15 @@ class CorrpMap(RandomiseRun):
         # Few voxels from ENIGMA template skeleton spreads into the area
         # defined as a gray matter by Harvard Oxford atlas
         left_mask_array = np.where((HO_data==1) + (HO_data==2), 1, 0)
-        left_skeleton_array = \
-                self.corrp_data \
-                * np.where(self.corrp_data!=0, 1, 0) \
-                * left_mask_array
-        print(left_skeleton_values.mean())
+        left_skeleton_array = self.corrp_data * left_mask_array
+        #print(left_skeleton_values.mean())
         right_mask_array = np.where((HO_data==12) + (HO_data==13), 1, 0)
-        right_skeleton_array = \
-                self.corrp_data \
-                * np.where(self.corrp_data!=0, 1, 0) \
-                * right_mask_array
+        right_skeleton_array = self.corrp_data * right_mask_array
 
         # count significant voxels in each hemispheres
-        self.significant_voxel_left_num = np.count_nonzero(
+        self.significant_voxel_left_num = np.sum(
             left_skeleton_array >= self.threshold)
-        self.significant_voxel_right_num = np.count_nonzero(
+        self.significant_voxel_right_num = np.sum(
             right_skeleton_array >= self.threshold)
 
         if np.count_nonzero(left_skeleton_array) == 0:
