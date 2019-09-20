@@ -1,12 +1,10 @@
 # fsl_randomise
 
-FSL randomise scripts
+FSL randomise related scripts.
 
 ## TODO
-- Write a test for randomise_summary.py
-
-write up `README.md`
-
+- Write a complete test for randomise_summary.py
+- Write up `README.md`
 
 
 Table of Contents
@@ -15,11 +13,85 @@ Table of Contents
     * [merge_images_and_make_design.py](#merge_images_and_make_design.py)
 
 
-# randomise_summary.py
+## randomise_summary.py
+This script could be used to summarize outputs from FSL randomise. 
 
-Summarizes randomise output.
 
 ## Usage
+
+> Simplest use
+
+It automatically finds `design.mat` and `design.con` in the current directory,
+along with `*corrp*nii.gz` images when ran without any options.
+
+```sh
+cd RANDOMISE/LOCATION/stats
+randomise_summary.py
+```
+
+
+
+> Individual `*corrp*nii.gz`
+
+Also individual `*corrp*nii.gz` images, `design.mat` and `design.con` in 
+different location could be specified with options.
+
+```sh
+randomise_summary.py -i stats/tbss_corrp_tstat1.nii.gz
+
+# you can also specify design matrices if they have different naming
+randomise_summary.py -i stats/tbss_corrp_tstat1.nii.gz \
+                     -d stats/this_is_design_file.mat \
+                     -c stats/this_is_contrast_file.mat \
+
+```
+
+
+> Control p-value threshold
+
+The p-value for significance could be altered, if higher threshold is rquired
+by adding extra option `-t` or `--threshold`
+
+```sh
+randomise_summary.py -t 0.99
+```
+
+
+> Run FSL's atlas query with the significant cluster
+
+FSL's atlas query returns information about the location of the cluster. If
+`-a` or `--atlas` option is given, the script will run atlas query on the 
+significant cluster and print the summarized output on screen
+
+```sh
+randomise_summary.py -a
+```
+
+> Extract values for the significant cluster in each subject
+
+It is a common practice to look at the correlation between the values of each
+subject in the significant cluster and their clinical scales.  Simply add `--subject_values` option for this.
+
+```sh
+randomise_summary.py --subject_values
+```
+
+If your randomise directory does not have the `all_*.nii.gz` (4d merged image), 
+specify the directory where the 4d merged images are, with `--merged_img_dir`
+
+```sh
+randomise_summary.py --subject_values \
+                     --merged_img_dir /DIRECTORY/WITH/all_4D_skeleton.nii.gz
+```
+
+> Create png file -- **under development : link kcho_figure.py**
+
+```sh
+randomise_summary.py --figure
+```
+
+
+> All options
 
 ```sh
 usage: randomise_summary.py [-h] [--directory DIRECTORY]
@@ -56,8 +128,6 @@ optional arguments:
 
 Kevin Cho Thursday, August 22, 2019
 ```
-
-
 
 ## Example output
 ```
