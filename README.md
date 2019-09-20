@@ -30,7 +30,7 @@ Dispatches `randomise_parallel` splited jobs through `bsub`.
 
 ### Usage
 ```sh
-randomise -i <4D_input_data> -o <output_rootname> -d design.mat -t design.con -m <mask_image> -n 5000 -T2
+kcho_randomise_parallel -i <4D_input_data> -o <output_rootname> -d design.mat -t design.con -m <mask_image> -n 5000 -T2
 ```
 
 
