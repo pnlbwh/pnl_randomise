@@ -46,11 +46,13 @@ def print_df(df):
     print(tabulate(df, headers='keys', tablefmt='psql'))
     print()
 
+
 def print_head(heading):
     print()
     print('-'*80)
     print(f'* {heading}')
     print('-'*80)
+
 
 class RandomiseRun:
     """Randomise output class
@@ -73,6 +75,8 @@ class RandomiseRun:
     TODO:
         set TBSS and skeleton directory default
     """
+
+
     def __init__(self, 
                  location='.', 
                  contrast_file='design.con', 
@@ -88,6 +92,7 @@ class RandomiseRun:
             self.contrast_file = self.location / contrast_file
         else:
             self.contrast_file = Path(contrast_file)
+
 
     def get_contrast_info(self):
         """Read design contrast file into a numpy array
@@ -111,6 +116,7 @@ class RandomiseRun:
         last_header_line_number = lines.index(headers[-1]) + 1
         self.contrast_array = np.loadtxt(self.contrast_file, 
                                          skiprows=last_header_line_number)
+
 
     def get_contrast_info_english(self):
         # if all lines are group comparisons --> simple group comparisons
@@ -241,6 +247,7 @@ class RandomiseRun:
             # count of each unique value as an extra row
             self.matrix_info.loc['count', col] = (self.matrix_df[col]==1).sum()
 
+
     def get_corrp_files(self):
         """Find corrp files and return a list of Path objects 
         """
@@ -261,6 +268,9 @@ class RandomiseRun:
         print(f'Group columns are : ' + ', '.join(self.group_cols))
         print_df(self.matrix_info)
 
+
+
+
 class CorrpMap(RandomiseRun):
     """Multiple comparison corrected randomise output class
 
@@ -270,6 +280,8 @@ class CorrpMap(RandomiseRun):
     loc -- str or Path object, location for the corrp map.
     threshold -- float, 1-p threhold for significance.
     """
+
+
     def __init__(self, location, threshold):
         self.location = Path(location)
         self.name = self.location.name
@@ -414,6 +426,7 @@ class CorrpMap(RandomiseRun):
                 'Sig Max':self.voxel_max_p,
             })
 
+
     def update_with_contrast(self):
         '''Update CorrpMap class when there the contrast file is available
         (when self.contrast_array is available)
@@ -452,6 +465,7 @@ class CorrpMap(RandomiseRun):
                                                          'contrast_text']]]
         return self.df
 
+
     def update_with_4d_data(self):
         """get mean values for skeleton files in the significant voxels
 
@@ -483,6 +497,7 @@ class CorrpMap(RandomiseRun):
             columns=[f'{self.modality} values in the significant '\
                      f'cluster {self.name}']
         )
+        
 
     def get_atlas_query(self):
         """Return pandas dataframe summary of atlas_query outputs"""
@@ -599,8 +614,11 @@ if __name__ == '__main__':
 
     args = argparser.parse_args()
 
+
     if not args.merged_img_dir:
         args.merged_img_dir = args.directory
+
+
     # if separate corrp image is given
     if args.input:
         corrpMaps = [Path(x) for x in args.input]
@@ -647,6 +665,7 @@ if __name__ == '__main__':
             corrpMap.contrast_lines = randomiseRun.contrast_lines
             corrpMap.update_with_contrast()
 
+
     # if subject_values option is given
     if args.subject_values:
         print_head('Values extracted for each subject')
@@ -690,6 +709,7 @@ if __name__ == '__main__':
     df = df.sort_values('file name')
     print_head('Result summary')
     print_df(df.set_index(df.columns[0]))
+
 
     # If atlas query option is on
     if args.atlasquery:
