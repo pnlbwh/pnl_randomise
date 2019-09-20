@@ -826,4 +826,5 @@ if __name__ == '__main__':
 
                 out_image_loc = re.sub('.nii.gz', '.png', 
                                        str(corrpMap.location))
+                print(out_image_loc)
                 corrpMap.fig.savefig(out_image_loc, dpi=100)

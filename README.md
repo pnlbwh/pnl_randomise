@@ -112,6 +112,11 @@ tbss_FW_tfce_corrp_tstat1.nii.gz
 ```
 
 
+![image_created_by_randomise_summary.py](test_tbss/stats/tbss_FW_tfce_corrp_tstat1.png)
+
+
+
+
 
 ## Usage
 
