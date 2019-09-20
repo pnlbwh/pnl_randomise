@@ -35,8 +35,10 @@ This script could be used to summarize outputs from FSL randomise.
 
 ```
 /data/pnl/kcho/PNLBWH/fsl_randomise/test_tbss/stats None None
+
 --------------------------------------------------------------------------------
 * Matrix summary
+--------------------------------------------------------------------------------
 /data/pnl/kcho/PNLBWH/fsl_randomise/test_tbss/stats
 /data/pnl/kcho/PNLBWH/fsl_randomise/test_tbss/stats/design.con
 /data/pnl/kcho/PNLBWH/fsl_randomise/test_tbss/stats/design.mat
@@ -52,11 +54,14 @@ Group columns are : col 0, col 1
 | unique | Group 1 | Group 2 | 0. 1.   | 20. 25. 37. |
 | count  | 0       | 4       | 1 3     | 1 2 1       |
 +--------+---------+---------+---------+-------------+
+
 There are voxels with p value between 0.9495 and 0.05. These numbers are rounded up in FSL to 0.95. Threfore to match to the FSL outputs, changing the threshold to (threshold - 0.00001)
+
 --------------------------------------------------------------------------------
+* Values extracted for each subject
+--------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 tbss_FW_tfce_corrp_tstat1.nii.gz
-FW
-/data/pnl/kcho/PNLBWH/fsl_randomise/test_tbss/stats/values_extracted_for_all_subjects.csv is created.
 +-----------+-------------------------------------------------------------------------+---------+---------+---------+---------+
 |           |   FW values in the significant cluster tbss_FW_tfce_corrp_tstat1.nii.gz |   col 0 |   col 1 |   col 2 |   col 3 |
 |-----------+-------------------------------------------------------------------------+---------+---------+---------+---------|
@@ -65,14 +70,45 @@ FW
 | subject 3 |                                                               0.123824  |       0 |       1 |       0 |      37 |
 | subject 4 |                                                               0.124727  |       0 |       1 |       1 |      20 |
 +-----------+-------------------------------------------------------------------------+---------+---------+---------+---------+
+/data/pnl/kcho/PNLBWH/fsl_randomise/test_tbss/stats/values_extracted_for_all_subjects.csv is created.
+
+
 --------------------------------------------------------------------------------
 * Result summary
+--------------------------------------------------------------------------------
 +----------------------------------+-----------------+-------------------+--------+------------+------------+----------------+-----------+-------------+--------------+------------------------+----------+-----------+
 | file name                        | contrast        | contrast_text     | Test   | Modality   |   Stat num | Significance   |   Sig Max |    Sig Mean |      Sig Std |   % significant voxels |   % left |   % right |
 |----------------------------------+-----------------+-------------------+--------+------------+------------+----------------+-----------+-------------+--------------+------------------------+----------+-----------|
 | tbss_FW_tfce_corrp_tstat1.nii.gz | 1. -1.  0.  0.  | Group 1 > Group 2 | t      | FW         |          1 | True           |    0.9886 |   0.0336064 |   0.00899722 |                   22.6 |       22 |      28.4 |
 | tbss_FW_tfce_corrp_tstat2.nii.gz | -1.  1.  0.  0. | Group 1 < Group 2 | t      | FW         |          2 | False          |    0.0536 | nan         | nan          |                  nan   |      nan |     nan   |
 +----------------------------------+-----------------+-------------------+--------+------------+------------+----------------+-----------+-------------+--------------+------------------------+----------+-----------+
+
+
+--------------------------------------------------------------------------------
+* Atlas query of the significant cluster
+--------------------------------------------------------------------------------
++----+----------------------------------+------------------------------------------+---------+----------+----------+----------+
+|    | file_name                        | Structure                                | atlas   |        L |        M |        R |
+|----+----------------------------------+------------------------------------------+---------+----------+----------+----------|
+|  0 | tbss_FW_tfce_corrp_tstat1.nii.gz | Anterior corona radiata                  | Labels  |   3.0888 | nan      |   4.909  |
+|  1 | tbss_FW_tfce_corrp_tstat1.nii.gz | Anterior limb of internal capsule        | Labels  |   1.6547 | nan      |   0.3861 |
+|  3 | tbss_FW_tfce_corrp_tstat1.nii.gz | Body of corpus callosum                  | Labels  | nan      |   7.4462 | nan      |
+|  6 | tbss_FW_tfce_corrp_tstat1.nii.gz | External capsule                         | Labels  |   0.6619 | nan      |   1.048  |
+|  9 | tbss_FW_tfce_corrp_tstat1.nii.gz | Genu of corpus callosum                  | Labels  | nan      |   6.1224 | nan      |
+| 12 | tbss_FW_tfce_corrp_tstat1.nii.gz | Posterior corona radiata                 | Labels  |   1.8753 | nan      |   2.096  |
+| 13 | tbss_FW_tfce_corrp_tstat1.nii.gz | Posterior limb of internal capsule       | Labels  |   0.6619 | nan      |   0.8825 |
+| 14 | tbss_FW_tfce_corrp_tstat1.nii.gz | Posterior thalamic radiation             | Labels  |   1.6547 | nan      |   2.813  |
+| 15 | tbss_FW_tfce_corrp_tstat1.nii.gz | Retrolenticular part of internal capsule | Labels  | nan      | nan      |   1.3789 |
+| 16 | tbss_FW_tfce_corrp_tstat1.nii.gz | Sagittal stratum                         | Labels  | nan      | nan      |   1.5996 |
+| 17 | tbss_FW_tfce_corrp_tstat1.nii.gz | Splenium of corpus callosum              | Labels  | nan      |  11.0866 | nan      |
+| 18 | tbss_FW_tfce_corrp_tstat1.nii.gz | Superior corona radiata                  | Labels  |   0.1655 | nan      |   0.717  |
+| 19 | tbss_FW_tfce_corrp_tstat1.nii.gz | Superior fronto-occipital fasciculus     | Labels  |   0.2206 | nan      | nan      |
+| 20 | tbss_FW_tfce_corrp_tstat1.nii.gz | Superior longitudinal fasciculus         | Labels  |   4.6332 | nan      |   2.3718 |
+| 22 | tbss_FW_tfce_corrp_tstat1.nii.gz | Tapetum                                  | Labels  |   0.2758 | nan      |   0.2206 |
+| 24 | tbss_FW_tfce_corrp_tstat1.nii.gz | Unclassified                             | Labels  | nan      |  42.0298 | nan      |
++----+----------------------------------+------------------------------------------+---------+----------+----------+----------+
+
+
 ```
 
 

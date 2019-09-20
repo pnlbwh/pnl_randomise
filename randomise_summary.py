@@ -44,7 +44,13 @@ def print_df(df):
         df: pandas dataframe
     """
     print(tabulate(df, headers='keys', tablefmt='psql'))
+    print()
 
+def print_head(heading):
+    print()
+    print('-'*80)
+    print(f'* {heading}')
+    print('-'*80)
 
 class RandomiseRun:
     """Randomise output class
@@ -247,8 +253,7 @@ class RandomiseRun:
 
 
     def print_matrix_info(self):
-        print('-'*80)
-        print('* Matrix summary')
+        print_head('Matrix summary')
         print(self.location)
         print(self.location / self.contrast_file)
         print(self.location / self.matrix_file)
@@ -538,6 +543,9 @@ class CorrpMap(RandomiseRun):
             values='Percentage', 
             data=df_query).reset_index()
 
+        # TODO: change here later
+        self.df_query = self.df_query.groupby('atlas').get_group('Labels')
+
 
 #class CorrpMapDetail(CorrpMap):
     #"""CorrpMap in detail
@@ -753,6 +761,7 @@ if __name__ == '__main__':
 
     # if subject_values option is given
     if args.subject_values:
+        print_head('Values extracted for each subject')
         values_df = pd.DataFrame()
         for corrpMap in corrp_map_classes:
             if corrpMap.significant:
@@ -791,12 +800,12 @@ if __name__ == '__main__':
 
     df = pd.concat([x.df for x in corrp_map_classes], sort=False)
     df = df.sort_values('file name')
-    print('-'*80)
-    print('* Result summary')
+    print_head('Result summary')
     print_df(df.set_index(df.columns[0]))
 
     # If atlas query option is on
     if args.atlasquery:
+        print_head('Atlas query of the significant cluster')
         for corrpMap in corrp_map_classes:
             if corrpMap.significant:
                 corrpMap.get_atlas_query()
