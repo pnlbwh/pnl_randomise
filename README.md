@@ -33,7 +33,7 @@ This script could be used to summarize outputs from FSL randomise.
 
 ## Example output
 
-```sh
+```
 /data/pnl/kcho/PNLBWH/fsl_randomise/test_tbss/stats None None
 --------------------------------------------------------------------------------
 * Matrix summary
