@@ -17,6 +17,10 @@ from io import StringIO
 from tabulate import tabulate
 pd.set_option('mode.chained_assignment', None)
 
+# figures
+import matplotlib.pyplot as plt
+from scipy import ndimage
+
 
 '''
 TODO:
@@ -438,7 +442,9 @@ class CorrpMap(RandomiseRun):
         '''
         # Contrast map
         line_num = int(self.stat_num)-1
+    
         self.contrast_line = self.contrast_array[line_num,:]
+        self.contrast_text = self.contrast_lines[line_num]
 
         self.df['contrast'] = np.array2string(self.contrast_line, 
                                               precision=2)[1:-1]
@@ -561,6 +567,92 @@ class CorrpMap(RandomiseRun):
         # TODO: change here later
         self.df_query = self.df_query.groupby('atlas').get_group('Labels')
 
+
+    def get_figure_enigma(self):
+        """Fig and axes attribute to CorrpMap"""
+
+        # enigma FA map - background settings
+        self.enigma_dir = Path('/data/pnl/soft/pnlpipe3/tbss/data/enigmaDTI')
+        self.enigma_fa_loc = self.enigma_dir / 'ENIGMA_DTI_FA.nii.gz'
+        self.enigma_skeleton_mask_loc = self.enigma_dir / \
+                'ENIGMA_DTI_FA_skeleton_mask.nii.gz'
+        self.enigma_fa_data = nb.load(
+            str(self.enigma_fa_loc)).get_data()
+        self.enigma_skeleton_data = nb.load(
+            str(self.enigma_skeleton_mask_loc)).get_data()
+
+        # figure settings
+        self.ncols = 5
+        self.nrows = 4
+        size_w = 4
+        size_h = 4
+        slice_gap = 3
+
+        # Get the center of data
+        center_of_data = np.array(
+            ndimage.measurements.center_of_mass(
+                self.enigma_fa_data)).astype(int)
+        # Get the center slice number
+        z_slice_center = center_of_data[-1]
+
+        # Get the slice numbers in array
+        nslice = self.ncols * self.nrows
+        slice_nums = np.arange(z_slice_center-(nslice * slice_gap), 
+                               z_slice_center+(nslice * slice_gap), 
+                               slice_gap)[::2]
+
+        # Make voxels with their intensities lower than data_vmin 
+        # transparent
+        data = np.where(self.corrp_data < self.threshold, 
+                        np.nan, 
+                        self.corrp_data)
+        self.enigma_skeleton_data = np.where(
+            self.enigma_skeleton_data < 1, 
+            np.nan, 
+            self.enigma_skeleton_data)
+
+        # Make fig and axes
+        fig, axes = plt.subplots(ncols=self.ncols, 
+                                 nrows=self.nrows, 
+                                 figsize=(size_w * self.ncols,
+                                          size_h * self.nrows),
+                                 dpi=150)
+
+        # For each axis
+        for num, ax in enumerate(np.ravel(axes)):
+            # background FA map
+            img = ax.imshow(
+                np.flipud(self.enigma_fa_data[:,:,slice_nums[num]].T),
+                cmap='gray')
+
+            # background skeleton
+            img = ax.imshow(
+                np.flipud(self.enigma_skeleton_data[:,:,slice_nums[num]].T),
+                cmap='ocean')
+
+            # main data
+            img = ax.imshow(np.flipud(data[:,:,slice_nums[num]].T), 
+                            cmap='autumn',
+                            vmin=self.threshold,
+                            vmax=1)
+            ax.axis('off')
+            ax.annotate('z = {}'.format(slice_nums[num]), 
+                        (0.01, 0.1), 
+                        xycoords='axes fraction', 
+                        color='white')
+
+        fig.subplots_adjust(hspace=0, wspace=0)
+
+        axbar = fig.add_axes([0.9, 0.2, 0.03, 0.6])
+        cb = fig.colorbar(img, axbar)
+        cbytick_obj = plt.getp(cb.ax, 'yticklabels') #Set y tick label color
+
+        plt.setp(cbytick_obj, color='white')
+        cb.outline.set_edgecolor('white')
+        cb.ax.yaxis.set_tick_params(color='white')
+
+        self.fig = fig
+        self.axes = axes
 
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser(
@@ -719,10 +811,26 @@ if __name__ == '__main__':
                 corrpMap.get_atlas_query()
                 print_df(corrpMap.df_query)
 
-    # TODO figure option
     #if args.merged_4d_file:
+        ## select significant rows from the the df
         #df_significant = df[df.Significance == True]
+
         #for file_name in
         #print_df(df_significant)
 
     # If figure option is on
+    if args.figure:
+        print_head('Saving figures')
+        for corrpMap in corrp_map_classes:
+            if corrpMap.significant == True:
+                corrpMap.get_figure_enigma()
+                plt.style.use('dark_background')
+                corrpMap.fig.suptitle(
+                    f'{corrpMap.modality} {corrpMap.contrast_text}\n'\
+                    f'{corrpMap.location}', 
+                    y=0.95, 
+                    fontsize=20)
+
+                out_image_loc = re.sub('.nii.gz', '.png', 
+                                       str(corrpMap.location))
+                corrpMap.fig.savefig(out_image_loc, dpi=100)

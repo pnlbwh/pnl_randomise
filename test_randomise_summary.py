@@ -179,5 +179,6 @@ def test():
 if __name__ == "__main__":
     #corrpMap_test()
     corrpMap_update_with_contrast_test()
+    corrpMap_figure()
 
 
