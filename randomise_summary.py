@@ -21,6 +21,7 @@ pd.set_option('mode.chained_assignment', None)
 '''
 TODO:
     - Test
+    - TODO add interaction information (group info to the get_contrast_info_english)
     - Check whether StringIO.io is used
     - Documentation
     - Estimate how much voxels overlap with different atlases with varying 
@@ -97,8 +98,13 @@ class RandomiseRun:
         self.contrast_array = np.loadtxt(self.contrast_file, 
                                          skiprows=last_header_line_number)
 
+    def get_contrast_info_english(self):
         # if all lines are group comparisons --> simple group comparisons
-        if (self.contrast_array.sum(axis=1)==0).all():
+        # TODO select group columns
+        #group_cols_array = np.array([int(x.split('_')[1]) for x \
+                                         #in self.group_cols])
+        #print(group_cols_array)
+        if (self.contrast_array.sum(axis=1)==0).all() :
             #TODO : do below at the array level?
             df_tmp = pd.DataFrame(self.contrast_array)
             contrast_lines = []
@@ -114,7 +120,25 @@ class RandomiseRun:
                     text = f'Group {neg_col_num+1} < Group {pos_col_num+1}'
                 contrast_lines.append(text)
             self.contrast_lines = contrast_lines
-        #TODO add else information
+        elif (np.absolute(self.contrast_array.sum(axis=1))==1).all():
+            #TODO : do below at the array level?
+            df_tmp = pd.DataFrame(self.contrast_array)
+            contrast_lines = []
+            for contrast_num, row in df_tmp.iterrows():
+                # name of the column with value of 1
+                col_num = row[row!=0].index.values[0]
+
+                # Change order of columns according to their column numbers
+                if row.loc[col_num] == 1:
+                    text = f'Positively correlated with col {col_num+1}'
+                else:
+                    text = f'Negatively correlated with col {col_num+1}'
+                contrast_lines.append(text)
+            self.contrast_lines = contrast_lines
+        #elif 
+        #TODO add interaction information
+        # if group column is zero
+        #0   0   1    -1
 
 
     def get_matrix_info(self):
@@ -273,7 +297,7 @@ class CorrpMap(RandomiseRun):
         self.voxel_max_p = data.max()
 
         # Discrepancy between numpy and FSL
-        if len(data[(data < 0.95) & (data > 0.9495)]) != 0:
+        if len(data[(data < 0.95) & (data >= 0.9495)]) != 0:
             self.threshold = self.threshold - 0.00001
             print('There are voxels with p value between 0.9495 and 0.05. '\
                   'These numbers are rounded up in FSL to 0.95. Threfore '\
@@ -281,7 +305,7 @@ class CorrpMap(RandomiseRun):
                   'threshold - 0.00001')
 
         # any voxels significant?
-        if (data > self.threshold).any():
+        if (data >= self.threshold).any():
             self.significant = True
             self.corrp_data = data
 
@@ -430,7 +454,7 @@ class CorrpMap(RandomiseRun):
         """
         merged_4d_data = nb.load(str(self.merged_4d_file)).get_data()
         significant_cluster_data = np.where(
-            self.corrp_data > self.threshold, 1, 0)
+            self.corrp_data >= self.threshold, 1, 0)
 
         self.cluster_averages = {}
         for vol_num in np.arange(merged_4d_data.shape[3]):
@@ -563,7 +587,7 @@ class CorrpMap(RandomiseRun):
         #"""
         #merged_4d_data = nb.load(str(self.merged_4d_file)).get_data()
         #significant_cluster_data = np.where(
-            #self.corrpMap.corrp_data > self.corrpMap.threshold, 1, 0)
+            #self.corrpMap.corrp_data >= self.corrpMap.threshold, 1, 0)
 
         #self.cluster_averages = {}
         #for vol_num in np.arange(merged_4d_data.shape[3]):
@@ -598,7 +622,7 @@ class CorrpMap(RandomiseRun):
             #- think about using all_modality_merged images?
         #"""
         #skeleton_files = list(Path(self.skeleton_dir).glob('*.nii.gz'))
-        #significant_cluster_data = np.where(self.corrp_data > self.threshold,
+        #significant_cluster_data = np.where(self.corrp_data >= self.threshold,
                                             #1, 0)
 
         #self.cluster_averages = {}
@@ -675,17 +699,18 @@ if __name__ == '__main__':
     if args.input:
         corrpMaps = [Path(x) for x in args.input]
         corrp_map_classes = [CorrpMap(x, args.threshold) for x in corrpMaps]
-        if args.contrast:
-            map(lambda x: setattr(x, contrast_file, args.contrast), 
-                corrp_map_classes)
-            map(lambda x: x.get_contrast_info(), corrp_map_classes)
-            map(lambda x: x.update_with_contrast(), corrp_map_classes)
         if args.matrix:
             map(lambda x: setattr(x, matrix_file, args.matrix), 
                 corrp_map_classes)
             map(lambda x: x.get_matrix_info(), corrp_map_classes)
             map(lambda x: x.get_matrix_info(), corrp_map_classes)
             corrp_map_classes[0].print_matrix_info()
+        if args.contrast:
+            map(lambda x: setattr(x, contrast_file, args.contrast), 
+                corrp_map_classes)
+            map(lambda x: x.get_contrast_info(), corrp_map_classes)
+            map(lambda x: x.get_contrast_info_english(), corrp_map_classes)
+            map(lambda x: x.update_with_contrast(), corrp_map_classes)
 
     # or if randomise image is given
     else:
@@ -704,6 +729,7 @@ if __name__ == '__main__':
         randomiseRun.print_matrix_info()
 
         randomiseRun.get_contrast_info()
+        randomiseRun.get_contrast_info_english()
         randomiseRun.get_corrp_files()
 
         corrpMaps = randomiseRun.corrp_ps
