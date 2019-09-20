@@ -2,22 +2,24 @@
 
 FSL randomise related scripts.
 
+
+
 ## TODO
 - Write a complete test for randomise_summary.py
 - Write up `README.md`
 
 
-Table of Contents
-=================
-    * [randomise_summary.py](#randomise_summary.py)
-    * [merge_images_and_make_design.py](#merge_images_and_make_design.py)
-
 
 ## randomise_summary.py
+
 This script could be used to summarize outputs from FSL randomise. 
 
 
+
+
 ## Usage
+
+
 
 > Simplest use
 
@@ -47,6 +49,8 @@ randomise_summary.py -i stats/tbss_corrp_tstat1.nii.gz \
 ```
 
 
+
+
 > Control p-value threshold
 
 The p-value for significance could be altered, if higher threshold is rquired
@@ -55,6 +59,8 @@ by adding extra option `-t` or `--threshold`
 ```sh
 randomise_summary.py -t 0.99
 ```
+
+
 
 
 > Run FSL's atlas query with the significant cluster
@@ -66,6 +72,8 @@ significant cluster and print the summarized output on screen
 ```sh
 randomise_summary.py -a
 ```
+
+
 
 > Extract values for the significant cluster in each subject
 
@@ -84,11 +92,15 @@ randomise_summary.py --subject_values \
                      --merged_img_dir /DIRECTORY/WITH/all_4D_skeleton.nii.gz
 ```
 
+
+
 > Create png file -- **under development : link kcho_figure.py**
 
 ```sh
 randomise_summary.py --figure
 ```
+
+
 
 
 > All options
@@ -129,7 +141,10 @@ optional arguments:
 Kevin Cho Thursday, August 22, 2019
 ```
 
+
+
 ## Example output
+
 ```
 [kc244@rgs09:/data/pnl/kcho/Lupus/TBSS/final/ANOVA]$ python /data/pnl/kcho/PNLBWH/fsl_randomise/randomise_summary.py
 /data/pnl/kcho/Lupus/TBSS/final/ANOVA None None
@@ -173,3 +188,18 @@ Group columns are : col 0, col 1, col 2
 | tbss_MD_tfce_corrp_tstat3.nii.gz  | 0.  1. -1. | t      | MD         |          3 | False          |  0.6076 | Group 2 > Group 3 | nan         | nan          |                  nan   |    nan   |     nan   |
 +-----------------------------------+------------+--------+------------+------------+----------------+---------+-------------------+-------------+--------------+------------------------+----------+-----------+
 ```
+
+
+
+## Test using `test_randomise_summary.py`
+
+```sh
+python test_randomise_summary.py
+```
+
+Above script checks for whether 
+- the modality from the file name is detected correctly
+- the `*corrp*nii.gz` is read properly
+- the number of significant voxels are the same as that estimated in FSL
+- the mean of significant voxels are almost equal to that estimated in FSL (to 4th decimal point)
+- the overlap estimated with the harvard oxford atlas equals that estimated in FSL
