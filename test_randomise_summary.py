@@ -176,6 +176,14 @@ def test():
 
     # mark group columns correctly
 
+def corrpMap_figure():
+    location = 'test_tbss/stats/tbss_no_cov_FW_tfce_corrp_tstat1.nii.gz'
+    threshold = 0.95
+    corrpMap = CorrpMap(location, threshold)
+    corrpMap.get_figure_enigma()
+
+
+
 if __name__ == "__main__":
     #corrpMap_test()
     corrpMap_update_with_contrast_test()

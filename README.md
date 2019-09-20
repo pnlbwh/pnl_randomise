@@ -6,13 +6,47 @@ FSL randomise related scripts.
 
 ## TODO
 - Write a complete test for randomise_summary.py
-- Write up `README.md`
 - Write up contrast line translation functions for interaction effect
 
 
 
 
-## Dependencies
+## Scripts
+- `randomise_summary.py` : used to summarize FSL randomise outputs
+- `kcho_randomise_parallel` : runs FSL randomise in parallel using bsub
+
+
+
+
+## `kcho_randomise_parallel`
+Dispatches `randomise_parallel` splited jobs through `bsub`.
+
+
+### Dependencies
+- FSL
+
+
+### Usage
+```sh
+randomise -i <4D_input_data> -o <output_rootname> -d design.mat -t design.con -m <mask_image> -n 5000 -T2
+```
+
+
+
+
+
+## `randomise_summary.py`
+
+Summarize outputs from FSL randomise. 
+- p-values
+- percentage of significant voxels
+- design matrix summary
+- extract values for each subject in the significant cluster
+
+
+
+
+### Dependencies
 - python 3
 - nibabel
 - pandas
@@ -22,16 +56,7 @@ FSL randomise related scripts.
 
 
 
-## randomise_summary.py
-
-This script could be used to summarize outputs from FSL randomise. 
-- p-values
-- percentage of significant voxels
-- design matrix summary
-- extract values for each subject in the significant cluster
-
-
-## Example output
+### Example output
 
 ```
 /data/pnl/kcho/PNLBWH/fsl_randomise/test_tbss/stats None None
@@ -118,7 +143,7 @@ tbss_FW_tfce_corrp_tstat1.nii.gz
 
 
 
-## Usage
+### Usage
 
 
 
@@ -245,9 +270,7 @@ Kevin Cho Thursday, August 22, 2019
 
 
 
-
-
-## Test using `test_randomise_summary.py`
+### Test using `test_randomise_summary.py`
 
 ```sh
 python test_randomise_summary.py
