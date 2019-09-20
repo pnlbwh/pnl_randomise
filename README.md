@@ -17,6 +17,8 @@ FSL randomise related scripts.
 
 
 
+---
+
 
 ## `kcho_randomise_parallel`
 Dispatches `randomise_parallel` splited jobs through `bsub`.
@@ -33,6 +35,8 @@ randomise -i <4D_input_data> -o <output_rootname> -d design.mat -t design.con -m
 
 
 
+
+---
 
 
 ## `randomise_summary.py`
