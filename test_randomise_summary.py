@@ -97,6 +97,14 @@ def corrpMap_update_with_contrast_test():
              'Negatively correlated with col 3'], 'contrast line check'
 
     # interaction effect
+    # correlation only
+    corrpMap.contrast_array = np.array([[0, 0, 1, -1], [0, 0, -1, 1]])
+    corrpMap.get_contrast_info_english()
+    assert corrpMap.contrast_lines == \
+            ['Positive Interaction', 
+             'Negative Interaction'], \
+            'interaction line check'
+
     matrix_file = 'test_tbss/stats/design.mat'
     corrpMap.matrix_file = matrix_file
     corrpMap.get_matrix_info()

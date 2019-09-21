@@ -130,11 +130,23 @@ class RandomiseRun:
                 pos_col_num = row[row==1].index.values[0]
                 neg_col_num = row[row==-1].index.values[0]
 
-                # Change order of columns according to their column numbers
-                if pos_col_num < neg_col_num:
-                    text = f'Group {pos_col_num+1} > Group {neg_col_num+1}'
+                #if interaction : they have zeros in the group column
+                #TODO : make this more efficient later
+                half_cols = (self.contrast_array.shape[0] / 2) + 1
+                if pos_col_num not in list(range(int(half_cols+1))):
+                    print(list(range(int(half_cols))))
+                    print('hahaha')
+                    if pos_col_num < neg_col_num:
+                        text = 'Negative Interaction'
+                    else:
+                        text = 'Positive Interaction'
+
                 else:
-                    text = f'Group {neg_col_num+1} < Group {pos_col_num+1}'
+                    # Change order of columns according to their column numbers
+                    if pos_col_num < neg_col_num:
+                        text = f'Group {pos_col_num+1} > Group {neg_col_num+1}'
+                    else:
+                        text = f'Group {neg_col_num+1} < Group {pos_col_num+1}'
                 self.contrast_lines.append(text)
         #TODO add interaction information
         # if group column is zero
