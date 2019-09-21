@@ -13,7 +13,7 @@ from os import environ
 import os
 
 # Pandas dataframe print
-from io import StringIO
+# only library that is not included in the anaconda 3
 from tabulate import tabulate
 pd.set_option('mode.chained_assignment', None)
 
@@ -28,15 +28,9 @@ TODO:
     - Save summary outputs in pdf, csv or excel?
     - TODO add interaction information (group info to the get_contrast_info_english)
     - Check whether StringIO.io is used
-    - Documentation
     - Estimate how much voxels overlap with different atlases with varying 
       thresholds.
     - Move useful functions to kcho_utils.
-    - Develop it further to utilze orig_dir input option
-    - Save significant voxel coordinates
-        - to extract mean values at these coordinates for all subjects
-        - to add extract information, 
-            - ie.number of voxels, average P-values etc.
     - Parallelize
 '''
 
@@ -67,19 +61,15 @@ class RandomiseRun:
     location -- str or Path object of a randomise output location. 
               Preferably with a 'design.con' and 'design.mat' inside.
               (default:'.')
-    threshold -- float, 1-p value used to threhold for significance.
-                 (default:0.95)
     contrast_file -- design contrast file used as the input for randomise.
                      (default:'design.con')
     matrix_file -- design matrix file used as the input for randomise.
                    (default:'design.mat')
-    orig_dir -- location of origdir.
 
-
-    TODO:
-        set TBSS and skeleton directory default
+    Below argument has been removed from RandomiseRun:
+    threshold -- float, 1-p value used to threhold for significance.
+                 (default:0.95)
     """
-
 
     def __init__(self, 
                  location='.', 
@@ -87,11 +77,16 @@ class RandomiseRun:
                  matrix_file='design.mat'):
         # define inputs
         self.location = Path(location)
+
+        # if matrix_file argument was not given, it would have
+        # been set as 'design.mat' --> make it into a full path
         if matrix_file == 'design.mat':
             self.matrix_file = self.location / matrix_file
         else:
             self.matrix_file = Path(matrix_file)
 
+        # if contrast_file argument was not given, it would have
+        # been set as 'design.con' --> make it into a full path
         if contrast_file == 'design.con':
             self.contrast_file = self.location / contrast_file
         else:
@@ -101,15 +96,8 @@ class RandomiseRun:
     def get_contrast_info(self):
         """Read design contrast file into a numpy array
 
-        'contrast_array' : numpy array of the contrast file excluding the 
+        self.contrast_array : numpy array of the contrast file excluding the 
                            headers
-        'contrast_lines' : attributes that states what each row in the 
-                           contrast array represents
-
-        TODO:
-            - check whether the randomise run is a f-test
-            - add a attribute that states the comparison in plain English for
-            other contrasts
         """
 
         with open(self.contrast_file, 'r') as f:
@@ -123,15 +111,20 @@ class RandomiseRun:
 
 
     def get_contrast_info_english(self):
-        # if all lines are group comparisons --> simple group comparisons
-        # TODO select group columns
-        #group_cols_array = np.array([int(x.split('_')[1]) for x \
-                                         #in self.group_cols])
-        #print(group_cols_array)
+        """Read design contrast file into a numpy array
+
+        self.contrast_lines : attributes that states what each row in the 
+                           contrast array represents
+       TODO:
+           select group columns
+        """
+
+        # if all lines are group comparisons --> 
+        # simple group comparisons or interaction effect
         if (self.contrast_array.sum(axis=1)==0).all() :
             #TODO : do below at the array level?
             df_tmp = pd.DataFrame(self.contrast_array)
-            contrast_lines = []
+            self.contrast_lines = []
             for contrast_num, row in df_tmp.iterrows():
                 # name of the column with value of 1
                 pos_col_num = row[row==1].index.values[0]
@@ -142,12 +135,18 @@ class RandomiseRun:
                     text = f'Group {pos_col_num+1} > Group {neg_col_num+1}'
                 else:
                     text = f'Group {neg_col_num+1} < Group {pos_col_num+1}'
-                contrast_lines.append(text)
-            self.contrast_lines = contrast_lines
+                self.contrast_lines.append(text)
+        #TODO add interaction information
+        # if group column is zero
+        #0   0   1    -1
+
+
+        # if all rows sum to 1 --> the correlation contrast
+        # TODO: there is a positibility of having 0.5 0.5?
         elif (np.absolute(self.contrast_array.sum(axis=1))==1).all():
             #TODO : do below at the array level?
             df_tmp = pd.DataFrame(self.contrast_array)
-            contrast_lines = []
+            self.contrast_lines = []
             for contrast_num, row in df_tmp.iterrows():
                 # name of the column with value of 1
                 col_num = row[row!=0].index.values[0]
@@ -157,12 +156,8 @@ class RandomiseRun:
                     text = f'Positively correlated with col {col_num+1}'
                 else:
                     text = f'Negatively correlated with col {col_num+1}'
-                contrast_lines.append(text)
-            self.contrast_lines = contrast_lines
-        #elif 
-        #TODO add interaction information
-        # if group column is zero
-        #0   0   1    -1
+                self.contrast_lines.append(text)
+
 
 
     def get_matrix_info(self):

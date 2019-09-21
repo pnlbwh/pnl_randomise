@@ -17,7 +17,6 @@ FSL randomise related scripts.
 
 
 
----
 
 
 ## `kcho_randomise_parallel`
@@ -35,8 +34,6 @@ kcho_randomise_parallel -i <4D_input_data> -o <output_rootname> -d design.mat -t
 
 
 
-
----
 
 
 ## `randomise_summary.py`
