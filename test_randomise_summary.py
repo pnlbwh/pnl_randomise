@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 
 def corrpMap_test():
-    location = 'test_tbss/stats/tbss_no_cov_FW_tfce_corrp_tstat1.nii.gz'
+    location = 'test_tbss/stats/tbss_FW_tfce_corrp_tstat1.nii.gz'
     threshold = 0.95
     corrpMap = CorrpMap(location, threshold)
     assert corrpMap.modality == 'FW', 'modality does not match'
@@ -49,7 +49,7 @@ def corrpMap_test():
 
 
 def corrpMap_update_with_contrast_test():
-    location = 'test_tbss/stats/tbss_no_cov_FW_tfce_corrp_tstat1.nii.gz'
+    location = 'test_tbss/stats/tbss_FW_tfce_corrp_tstat1.nii.gz'
     threshold = 0.95
     corrpMap = CorrpMap(location, threshold)
 
@@ -97,6 +97,14 @@ def corrpMap_update_with_contrast_test():
              'Negatively correlated with col 3'], 'contrast line check'
 
     # interaction effect
+    # correlation only
+    corrpMap.contrast_array = np.array([[0, 0, 1, -1], [0, 0, -1, 1]])
+    corrpMap.get_contrast_info_english()
+    assert corrpMap.contrast_lines == \
+            ['Positive Interaction', 
+             'Negative Interaction'], \
+            'interaction line check'
+
     matrix_file = 'test_tbss/stats/design.mat'
     corrpMap.matrix_file = matrix_file
     corrpMap.get_matrix_info()
@@ -177,7 +185,7 @@ def test():
     # mark group columns correctly
 
 def corrpMap_figure():
-    location = 'test_tbss/stats/tbss_no_cov_FW_tfce_corrp_tstat1.nii.gz'
+    location = 'test_tbss/stats/tbss_FW_tfce_corrp_tstat1.nii.gz'
     threshold = 0.95
     corrpMap = CorrpMap(location, threshold)
     corrpMap.get_figure_enigma()
@@ -185,8 +193,11 @@ def corrpMap_figure():
 
 
 if __name__ == "__main__":
+    print_head('Testing started')
+
     #corrpMap_test()
+    print_head('Testing contrast detections')
     corrpMap_update_with_contrast_test()
-    corrpMap_figure()
+    #corrpMap_figure()
 
 
