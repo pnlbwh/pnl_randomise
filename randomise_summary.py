@@ -167,7 +167,7 @@ class RandomiseRun:
 
     def get_matrix_info(self):
         """Read design matrix file into a numpy array and summarize
-        
+ _kcho       
         attributes added
         'matrix_header' : headers in the matrix file 
         'matrix_array' : numpy array matrix part of the matrix file
@@ -177,7 +177,7 @@ class RandomiseRun:
             add function defining which column is group
         """
         with open(self.matrix_file, 'r') as f:
-            lines = f.readlines()
+            lines = [x.strip() for x in f.readlines()]
             matrix_lines = [x for x in lines if x.startswith('/')]
 
         self.matrix_header = [
@@ -191,8 +191,9 @@ class RandomiseRun:
         self.matrix_header = '\n'.join(
             [x[1:].strip() for x in self.matrix_header])
 
+        the_line_with_matrix = lines.index('/Matrix') + 1
         self.matrix_array = np.loadtxt(self.matrix_file, 
-                                       skiprows=len(matrix_lines))
+                                       skiprows=the_line_with_matrix)
 
         # matrix array into pandas dataframe
         self.matrix_df = pd.DataFrame(self.matrix_array)
@@ -209,10 +210,11 @@ class RandomiseRun:
         for col in self.matrix_df.columns:
             # create a dataframe that contains unique values as the index 
             unique_values = self.matrix_df[col].value_counts().sort_index()
-            # If there are less than 5 unique values for the column
-            if len(unique_values) < 5:
+            # If there are less unique values than the half the number of 
+            # all data  for the column
+            if len(unique_values) < len(self.matrix_df) / 2:
                 # unique values as an extra row
-                self.matrix_info.loc['unique', col] = np.array2string(
+                self.matrix_info.loc['unique values', col] = np.array2string(
                     unique_values.index)[1:-1]
                 # count of each unique value as an extra row
                 self.matrix_info.loc['count', col] = np.array2string(
@@ -220,7 +222,7 @@ class RandomiseRun:
             # If there are 5 or more unique values in the column, leave the
             else:
                 # 'unique' and 'count' as 'continuous values'
-                self.matrix_info.loc['unique', col] = 'continuous values'
+                self.matrix_info.loc['unique values', col] = 'continuous values'
                 self.matrix_info.loc['count', col] = 'continuous values'
 
 
@@ -229,27 +231,34 @@ class RandomiseRun:
         min_0_max_1_col = [x for x in self.matrix_df.columns \
                            if self.matrix_df[x].isin([0,1]).all()]
 
-        # if sum of each row equal to 1, these columns would highly likely be 
-        # group columns
-        if (self.matrix_df[min_0_max_1_col].sum(axis=1) == 1).all():
-            self.group_cols = min_0_max_1_col
-        # If not, remove a column from the list of columns at the end, and 
-        # test whether each row sums to 1
-        elif (self.matrix_df[min_0_max_1_col[:-1]].sum(axis=1) == 1).all():
-            self.group_cols = min_0_max_1_col[:-1]
-        elif (self.matrix_df[min_0_max_1_col[:-2]].sum(axis=1) == 1).all():
-            self.group_cols = min_0_max_1_col[:-2]
-        elif (self.matrix_df[min_0_max_1_col[:-3]].sum(axis=1) == 1).all():
-            self.group_cols = min_0_max_1_col[:-3]
-        else:
-            self.group_cols = min_0_max_1_col[0]
+        if 'col 0' not in min_0_max_1_col:
+            print("Group Column is not in the first column")
+            print("Setting self.group_cols=['no group col']")
+            self.group_cols = ['no group col']
 
-        # 'unique' and 'count' columns of group columns
-        for group_num, col in enumerate(self.group_cols, 1):
-            # unique values as an extra row
-            self.matrix_info.loc['unique', col] = f"Group {group_num}"
-            # count of each unique value as an extra row
-            self.matrix_info.loc['count', col] = (self.matrix_df[col]==1).sum()
+        else:
+            # if sum of each row equal to 1, these columns would highly likely 
+            # be group columns
+            if (self.matrix_df[min_0_max_1_col].sum(axis=1) == 1).all():
+                self.group_cols = min_0_max_1_col
+            # If not, remove a column from the list of columns at the end, and 
+            # test whether each row sums to 1
+            elif (self.matrix_df[min_0_max_1_col[:-1]].sum(axis=1) == 1).all():
+                self.group_cols = min_0_max_1_col[:-1]
+            elif (self.matrix_df[min_0_max_1_col[:-2]].sum(axis=1) == 1).all():
+                self.group_cols = min_0_max_1_col[:-2]
+            elif (self.matrix_df[min_0_max_1_col[:-3]].sum(axis=1) == 1).all():
+                self.group_cols = min_0_max_1_col[:-3]
+            else:
+                self.group_cols = min_0_max_1_col[0]
+
+            # 'unique' and 'count' columns of group columns
+            for group_num, col in enumerate(self.group_cols, 1):
+                # unique values as an extra row
+                self.matrix_info.loc['unique', col] = f"Group {group_num}"
+                # count of each unique value as an extra row
+                self.matrix_info.loc['count', col] = \
+                        (self.matrix_df[col]==1).sum()
 
 
     def get_corrp_files(self):
@@ -730,7 +739,6 @@ if __name__ == '__main__':
 
     # or if randomise image is given
     else:
-        print(args.directory, args.contrast, args.matrix)
         if args.contrast and args.matrix:
             randomiseRun = RandomiseRun(args.directory)
         elif args.contrast:
