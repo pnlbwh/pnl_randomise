@@ -11,3 +11,10 @@ def print_df(df):
     """
     print(tabulate(df, headers='keys', tablefmt='psql'))
     print()
+
+
+def print_head(heading):
+    print()
+    print('-'*80)
+    print(f'* {heading}')
+    print('-'*80)

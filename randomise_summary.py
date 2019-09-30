@@ -18,6 +18,9 @@ pd.set_option('mode.chained_assignment', None)
 import matplotlib.pyplot as plt
 from scipy import ndimage
 
+# utils
+from fsl_randomise_utils import *
+
 
 '''
 TODO:
@@ -30,14 +33,6 @@ TODO:
     - Move useful functions to kcho_utils.
     - Parallelize
 '''
-
-
-
-def print_head(heading):
-    print()
-    print('-'*80)
-    print(f'* {heading}')
-    print('-'*80)
 
 
 class RandomiseRun:
