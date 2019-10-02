@@ -730,7 +730,9 @@ if __name__ == '__main__':
     # or if randomise image is given
     else:
         if args.contrast and args.matrix:
-            randomiseRun = RandomiseRun(args.directory)
+            randomiseRun = RandomiseRun(args.directory,
+                                        matrix_file=args.matrix,
+                                        contrast_file=args.contrast)
         elif args.contrast:
             randomiseRun = RandomiseRun(args.directory, args.contrast)
         elif args.matrix:
