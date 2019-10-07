@@ -1,0 +1,86 @@
+#!/data/pnl/kcho/anaconda3/bin/python
+
+from pathlib import Path
+import tempfile
+
+# Imaging
+import nibabel as nb
+import argparse
+import pandas as pd
+import re
+import numpy as np
+from os import environ
+import os
+
+pd.set_option('mode.chained_assignment', None)
+
+# figures
+import matplotlib.pyplot as plt
+from scipy import ndimage
+
+# utils
+from fsl_randomise_utils import *
+
+
+'''
+TODO:
+    - Test
+    - Save summary outputs in pdf, csv or excel?
+    - TODO add interaction information (group info to the get_contrast_info_english)
+    - Check whether StringIO.io is used
+    - Estimate how much voxels overlap with different atlases with varying 
+      thresholds.
+    - Move useful functions to kcho_utils.
+    - Parallelize
+'''
+
+class FA:
+    def __init__(self, **kwargs):
+        self.fa = kwargs.pop('fa')
+        self.mask = kwargs.pop('mask')
+
+
+    def read_fa_maps(self):
+        self.fa_img = nb.load(self.fa)
+        self.fa_data = self.fa_img.get_data()
+
+
+    def read_mask_maps(self):
+        self.mask_img = nb.load(self.mask)
+        self.mask_data = self.mask_img.get_data()
+    
+
+    def check_holes_in_mask(self):
+        self.read_fa_maps()
+        self.read_mask_maps()
+        
+        zero = (self.fa_data[self.mask_data == 1] == 0)
+        print(zero.shape)
+        print(zero.sum())
+        if (self.fa_data[self.mask_data == 1] == 0).any():
+            return True
+
+
+
+if __name__ == '__main__':
+    argparser = argparse.ArgumentParser(
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description='''\
+        randomise_summary.py --dir /example/randomise/output/dir/
+        ''',epilog="Kevin Cho Thursday, August 22, 2019")
+
+    argparser.add_argument("--fa","-f",
+                           type=str,
+                           help='FA map')
+
+    argparser.add_argument("--mask","-m",
+                           type=str,
+                           help='Mask')
+
+    args = argparser.parse_args()
+
+
+    #check_holes_FA(fa=args.fa, mask=args.mask)
+    f = FA(fa=args.fa, mask=args.mask)
+    print(f.check_holes_in_mask())
+
