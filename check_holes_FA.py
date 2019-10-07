@@ -50,18 +50,19 @@ class FA:
         self.mask_data = self.mask_img.get_data()
     
 
-    def check_holes_in_mask(self):
+    def zero_FA_within_mask(self):
         self.read_fa_maps()
         self.read_mask_maps()
         
-        print(((self.fa_data == 0) and (self.mask_data == 1)).any())
-        
-        zero = (self.fa_data[self.mask_data == 1] == 0)
-        print(zero.shape)
-        print(zero.sum())
-        if (self.fa_data[self.mask_data == 1] == 0).any():
+        self.zero_within_mask = \
+                (self.fa_data == 0) * (self.mask_data == 1)
+
+        if (self.zero_within_mask).any():
             return True
 
+
+    def get_distance_from_nearest_zero(self):
+        pass
 
 
 if __name__ == '__main__':
