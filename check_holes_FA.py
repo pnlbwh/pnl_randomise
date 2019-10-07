@@ -54,6 +54,8 @@ class FA:
         self.read_fa_maps()
         self.read_mask_maps()
         
+        print(((self.fa_data == 0) and (self.mask_data == 1)).any())
+        
         zero = (self.fa_data[self.mask_data == 1] == 0)
         print(zero.shape)
         print(zero.sum())
