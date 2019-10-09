@@ -378,7 +378,6 @@ class CorrpMap(RandomiseRun):
         try:
             left_mask_array = np.where((HO_data==1) + (HO_data==2), 1, 0)
             left_skeleton_array = self.corrp_data * left_mask_array
-            #print(left_skeleton_values.mean())
             right_mask_array = np.where((HO_data==12) + (HO_data==13), 1, 0)
             right_skeleton_array = self.corrp_data * right_mask_array
 
@@ -623,7 +622,6 @@ class CorrpMap(RandomiseRun):
         center_of_data = np.array(
             ndimage.measurements.center_of_mass(
                 self.enigma_fa_data)).astype(int)
-        print(center_of_data)
         # Get the center slice number
         z_slice_center = center_of_data[-1]
 
@@ -643,7 +641,6 @@ class CorrpMap(RandomiseRun):
             np.nan, 
             self.enigma_skeleton_data)
 
-        print('hahaha')
 
         # Make fig and axes
         fig, axes = plt.subplots(ncols=self.ncols, 
@@ -652,12 +649,9 @@ class CorrpMap(RandomiseRun):
                                           size_h * self.nrows),
                                  dpi=150)
 
-        print(axes)
-        print('hahaha')
 
         # For each axis
         for num, ax in enumerate(np.ravel(axes)):
-            print(num)
             # background FA map
             img = ax.imshow(
                 np.flipud(self.enigma_fa_data[:,:,slice_nums[num]].T),
@@ -691,7 +685,6 @@ class CorrpMap(RandomiseRun):
 
         self.fig = fig
         self.axes = axes
-        print('hoho')
 
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser(
