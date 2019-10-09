@@ -15,6 +15,8 @@ import os
 pd.set_option('mode.chained_assignment', None)
 
 # figures
+import matplotlib as mpl
+mpl.use('Agg')
 import matplotlib.pyplot as plt
 from scipy import ndimage
 
