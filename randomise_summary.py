@@ -315,9 +315,13 @@ class CorrpMap(RandomiseRun):
 
     def check_significance(self):
         """Check whether there is any significant voxel"""
+
+        # read corrp images
         img = nb.load(str(self.location))
         data = img.get_data()
-        #data = np.around(data, decimals=6)
+
+        # add data resolution attribute
+        self.data_shape = data.shape
 
         # max p-value
         self.voxel_max_p = data.max()
@@ -585,6 +589,7 @@ class CorrpMap(RandomiseRun):
         self.enigma_skeleton_mask_loc = self.enigma_dir / \
                 'ENIGMA_DTI_FA_skeleton_mask.nii.gz'
 
+        # if study template is not ENIGMA
         if 'mean_fa' in kwargs:
             mean_fa_loc = kwargs.get('mean_fa')
             print(f'background image : {mean_fa_loc}')
@@ -605,8 +610,12 @@ class CorrpMap(RandomiseRun):
         self.nrows = 4
         size_w = 4
         size_h = 4
-        # Todo change here (when 2mm data is given, slice_gap=3 is too wide)
-        slice_gap = 3
+
+        # When study template is used, slice_gap=3 is too wide)
+        if self.data_shape[-1] < 100:
+            slice_gap = 2
+        else:
+            slice_gap = 3
 
         # Get the center of data
         center_of_data = np.array(
@@ -862,6 +871,8 @@ if __name__ == '__main__':
                     corrpMap.get_figure_enigma()
                 else:
                     corrpMap.get_figure_enigma(mean_fa=args.template)
+
+                # dark figure background
                 plt.style.use('dark_background')
 
                 try:
@@ -881,5 +892,5 @@ if __name__ == '__main__':
                 out_image_loc = re.sub('.nii.gz', '.png', 
                                        str(corrpMap.location))
                 print(out_image_loc)
-                #corrpMap.fig.savefig(out_image_loc, dpi=100)
-                corrpMap.fig.savefig('/PHShome/kc244/out_image_loc.png', dpi=100)
+                corrpMap.fig.savefig(out_image_loc, dpi=100)
+                #corrpMap.fig.savefig('/PHShome/kc244/out_image_loc.png', dpi=100)
