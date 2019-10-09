@@ -718,7 +718,7 @@ if __name__ == '__main__':
     argparser.add_argument("--template", "-template",
                            type=str,
                            default='enigma',
-                           help='FA template used in TBSS')
+                           help='FA template used (or created) in TBSS')
 
     argparser.add_argument("--subject_values", "-s",
                            action='store_true',
@@ -740,9 +740,14 @@ if __name__ == '__main__':
     args = argparser.parse_args()
 
 
+    # detect template
+    if args.template != 'enigma':
+        print(f'Study specific template : {args.template}')
+    else:
+        print(f'ENIGMA template')
+
     if not args.merged_img_dir:
         args.merged_img_dir = args.directory
-
 
     # if separate corrp image is given
     if args.input:
