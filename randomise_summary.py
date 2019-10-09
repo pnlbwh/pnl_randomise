@@ -117,8 +117,6 @@ class RandomiseRun:
                 #TODO : make this more efficient later
                 half_cols = (self.contrast_array.shape[0] / 2) + 1
                 if pos_col_num not in list(range(int(half_cols+1))):
-                    print(list(range(int(half_cols))))
-                    print('hahaha')
                     if pos_col_num < neg_col_num:
                         text = 'Negative Interaction'
                     else:
@@ -366,35 +364,43 @@ class CorrpMap(RandomiseRun):
         """Get overlap information of significant voxels with Harvard Oxford"""
         # Number of voxels in each hemisphere
         # Harvard-Oxford left and right hemisphere white matter masks
+        # TODO: what to do if template space is not same as the HO space?
         HO_data = nb.load(str(self.HO_sub_thr0_1mm)).get_data()
 
         # Few voxels from ENIGMA template skeleton spreads into the area
         # defined as a gray matter by Harvard Oxford atlas
-        left_mask_array = np.where((HO_data==1) + (HO_data==2), 1, 0)
-        left_skeleton_array = self.corrp_data * left_mask_array
-        #print(left_skeleton_values.mean())
-        right_mask_array = np.where((HO_data==12) + (HO_data==13), 1, 0)
-        right_skeleton_array = self.corrp_data * right_mask_array
+        try:
+            left_mask_array = np.where((HO_data==1) + (HO_data==2), 1, 0)
+            left_skeleton_array = self.corrp_data * left_mask_array
+            #print(left_skeleton_values.mean())
+            right_mask_array = np.where((HO_data==12) + (HO_data==13), 1, 0)
+            right_skeleton_array = self.corrp_data * right_mask_array
 
-        # count significant voxels in each hemispheres
-        self.significant_voxel_left_num = np.sum(
-            left_skeleton_array >= self.threshold)
-        self.significant_voxel_right_num = np.sum(
-            right_skeleton_array >= self.threshold)
+            # count significant voxels in each hemispheres
+            self.significant_voxel_left_num = np.sum(
+                left_skeleton_array >= self.threshold)
+            self.significant_voxel_right_num = np.sum(
+                right_skeleton_array >= self.threshold)
 
-        if np.count_nonzero(left_skeleton_array) == 0:
-            self.significant_voxel_left_percent = 0
-        else:
-            self.significant_voxel_left_percent = (
-                self.significant_voxel_left_num / \
-                np.count_nonzero(left_skeleton_array)) * 100
+            if np.count_nonzero(left_skeleton_array) == 0:
+                self.significant_voxel_left_percent = 0
+            else:
+                self.significant_voxel_left_percent = (
+                    self.significant_voxel_left_num / \
+                    np.count_nonzero(left_skeleton_array)) * 100
 
-        if np.count_nonzero(right_skeleton_array) == 0:
-            self.significant_voxel_right_percent = 0
-        else:
-            self.significant_voxel_right_percent = (
-                self.significant_voxel_right_num / \
-                np.count_nonzero(right_skeleton_array)) * 100
+            if np.count_nonzero(right_skeleton_array) == 0:
+                self.significant_voxel_right_percent = 0
+            else:
+                self.significant_voxel_right_percent = (
+                    self.significant_voxel_right_num / \
+                    np.count_nonzero(right_skeleton_array)) * 100
+        except:
+            print('** This study has a specific template. The number of '\
+                  'significant voxels in the left and right hemisphere '\
+                  'will not be estimated')
+            self.significant_voxel_right_percent = 'unknown'
+            self.significant_voxel_left_percent = 'unknown'
 
 
     def make_df(self):
@@ -417,8 +423,11 @@ class CorrpMap(RandomiseRun):
             # round up columns that stars with percent
             for percent_col in [x for x in self.df.columns \
                                 if x.startswith('%')]:
-                self.df[percent_col] = self.df[percent_col].round(
-                    decimals=1)
+                try:
+                    self.df[percent_col] = self.df[percent_col].round(
+                        decimals=1)
+                except:
+                    pass
         else:
             self.df = pd.DataFrame({
                 'file name':[self.name],
@@ -567,7 +576,7 @@ class CorrpMap(RandomiseRun):
         self.df_query = self.df_query.groupby('atlas').get_group('Labels')
 
 
-    def get_figure_enigma(self):
+    def get_figure_enigma(self, **kwargs):
         """Fig and axes attribute to CorrpMap"""
 
         # enigma FA map - background settings
@@ -575,22 +584,35 @@ class CorrpMap(RandomiseRun):
         self.enigma_fa_loc = self.enigma_dir / 'ENIGMA_DTI_FA.nii.gz'
         self.enigma_skeleton_mask_loc = self.enigma_dir / \
                 'ENIGMA_DTI_FA_skeleton_mask.nii.gz'
-        self.enigma_fa_data = nb.load(
-            str(self.enigma_fa_loc)).get_data()
-        self.enigma_skeleton_data = nb.load(
-            str(self.enigma_skeleton_mask_loc)).get_data()
+
+        if 'mean_fa' in kwargs:
+            mean_fa_loc = kwargs.get('mean_fa')
+            print(f'background image : {mean_fa_loc}')
+            self.enigma_fa_data = nb.load(mean_fa_loc).get_data()
+
+            mean_fa_skel_loc = re.sub('.nii.gz', '_skeleton.nii.gz',
+                                      mean_fa_loc)
+            print(f'background skeleton image: {mean_fa_skel_loc}')
+            self.enigma_skeleton_data = nb.load(mean_fa_skel_loc).get_data()
+        else:
+            self.enigma_fa_data = nb.load(
+                str(self.enigma_fa_loc)).get_data()
+            self.enigma_skeleton_data = nb.load(
+                str(self.enigma_skeleton_mask_loc)).get_data()
 
         # figure settings
         self.ncols = 5
         self.nrows = 4
         size_w = 4
         size_h = 4
+        # Todo change here (when 2mm data is given, slice_gap=3 is too wide)
         slice_gap = 3
 
         # Get the center of data
         center_of_data = np.array(
             ndimage.measurements.center_of_mass(
                 self.enigma_fa_data)).astype(int)
+        print(center_of_data)
         # Get the center slice number
         z_slice_center = center_of_data[-1]
 
@@ -610,6 +632,8 @@ class CorrpMap(RandomiseRun):
             np.nan, 
             self.enigma_skeleton_data)
 
+        print('hahaha')
+
         # Make fig and axes
         fig, axes = plt.subplots(ncols=self.ncols, 
                                  nrows=self.nrows, 
@@ -617,8 +641,12 @@ class CorrpMap(RandomiseRun):
                                           size_h * self.nrows),
                                  dpi=150)
 
+        print(axes)
+        print('hahaha')
+
         # For each axis
         for num, ax in enumerate(np.ravel(axes)):
+            print(num)
             # background FA map
             img = ax.imshow(
                 np.flipud(self.enigma_fa_data[:,:,slice_nums[num]].T),
@@ -652,6 +680,7 @@ class CorrpMap(RandomiseRun):
 
         self.fig = fig
         self.axes = axes
+        print('hoho')
 
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser(
@@ -686,6 +715,11 @@ if __name__ == '__main__':
                            type=str,
                            help='Matrix file used for the randomise')
 
+    argparser.add_argument("--template", "-template",
+                           type=str,
+                           default='enigma',
+                           help='FA template used in TBSS')
+
     argparser.add_argument("--subject_values", "-s",
                            action='store_true',
                            help='Print average in the significant cluster for \
@@ -714,12 +748,15 @@ if __name__ == '__main__':
     if args.input:
         corrpMaps = [Path(x) for x in args.input]
         corrp_map_classes = [CorrpMap(x, args.threshold) for x in corrpMaps]
-        if args.matrix:
+        if args.matrix and args.contrast:
             map(lambda x: setattr(x, matrix_file, args.matrix), 
                 corrp_map_classes)
+            map(lambda x: setattr(x, 'contrast_file', args.contrast), 
+                corrp_map_classes)
             map(lambda x: x.get_matrix_info(), corrp_map_classes)
-            map(lambda x: x.get_matrix_info(), corrp_map_classes)
-            corrp_map_classes[0].print_matrix_info()
+            map(lambda x: x.get_contrast_info(), corrp_map_classes)
+            #corrp_map_classes[0].print_matrix_info()
+            map(lambda x: x.update_with_contrast(), corrp_map_classes)
         if args.contrast:
             map(lambda x: setattr(x, contrast_file, args.contrast), 
                 corrp_map_classes)
@@ -816,15 +853,28 @@ if __name__ == '__main__':
         print_head('Saving figures')
         for corrpMap in corrp_map_classes:
             if corrpMap.significant == True:
-                corrpMap.get_figure_enigma()
+                if args.template == 'enigma':
+                    corrpMap.get_figure_enigma()
+                else:
+                    corrpMap.get_figure_enigma(mean_fa=args.template)
                 plt.style.use('dark_background')
-                corrpMap.fig.suptitle(
-                    f'{corrpMap.modality} {corrpMap.contrast_text}\n'\
-                    f'{corrpMap.location}', 
-                    y=0.95, 
-                    fontsize=20)
+
+                try:
+                    corrpMap.fig.suptitle(
+                        f'{corrpMap.modality} {corrpMap.contrast_text}\n'\
+                        f'{corrpMap.location}', 
+                        y=0.95, 
+                        fontsize=20)
+                except:
+                    corrpMap.fig.suptitle(
+                        f'{corrpMap.modality}\n'\
+                        f'{corrpMap.location}', 
+                        y=0.95, 
+                        fontsize=20)
+
 
                 out_image_loc = re.sub('.nii.gz', '.png', 
                                        str(corrpMap.location))
                 print(out_image_loc)
-                corrpMap.fig.savefig(out_image_loc, dpi=100)
+                #corrpMap.fig.savefig(out_image_loc, dpi=100)
+                corrpMap.fig.savefig('/PHShome/kc244/out_image_loc.png', dpi=100)

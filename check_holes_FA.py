@@ -85,5 +85,5 @@ if __name__ == '__main__':
 
     #check_holes_FA(fa=args.fa, mask=args.mask)
     f = FA(fa=args.fa, mask=args.mask)
-    print(f.check_holes_in_mask())
+    print(f.zero_FA_within_mask())
 
