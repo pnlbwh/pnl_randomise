@@ -154,6 +154,7 @@ class RandomiseRun:
                 self.contrast_lines.append(text)
 
 
+        print(self.contrast_lines)
 
     def get_matrix_info(self):
         """Read design matrix file into a numpy array and summarize
@@ -485,6 +486,12 @@ class CorrpMap(RandomiseRun):
         return self.df
 
 
+    def get_significant_cluster(self):
+        """Get binary array of significant cluster"""
+        self.significant_cluster_data = np.where(
+            self.corrp_data >= self.threshold, 1, 0)
+
+
     def update_with_4d_data(self):
         """get mean values for skeleton files in the significant voxels
 
@@ -764,6 +771,8 @@ if __name__ == '__main__':
                 corrp_map_classes)
             map(lambda x: x.get_matrix_info(), corrp_map_classes)
             map(lambda x: x.get_contrast_info(), corrp_map_classes)
+            print('a=>ah')
+            map(lambda x: x.get_contrast_info_english(), corrp_map_classes)
             #corrp_map_classes[0].print_matrix_info()
             map(lambda x: x.update_with_contrast(), corrp_map_classes)
         if args.contrast:
