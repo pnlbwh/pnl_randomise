@@ -23,9 +23,12 @@ from scipy import ndimage
 # utils
 from fsl_randomise_utils import *
 
+# new options
+import inquirer
 
 '''
 TODO:
+    - `-i` and without `-i` to use similar flow.
     - Test
     - Save summary outputs in pdf, csv or excel?
     - TODO add interaction information (group info to the get_contrast_info_english)
@@ -56,9 +59,9 @@ class RandomiseRun:
                  (default:0.95)
     """
 
-    def __init__(self, 
-                 location='.', 
-                 contrast_file='design.con', 
+    def __init__(self,
+                 location='.',
+                 contrast_file='design.con',
                  matrix_file='design.mat'):
         # define inputs
         self.location = Path(location)
@@ -693,36 +696,37 @@ class CorrpMap(RandomiseRun):
         self.fig = fig
         self.axes = axes
 
+
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description='''\
         randomise_summary.py --dir /example/randomise/output/dir/
-        ''',epilog="Kevin Cho Thursday, August 22, 2019")
+        ''', epilog="Kevin Cho Thursday, August 22, 2019")
 
-    argparser.add_argument("--directory","-d",
+    argparser.add_argument("--directory", "-d",
                            type=str,
                            help='Specify randomise out dir. This this option \
                                  is given, design.mat and design.con within \
                                  the directory are read by default.',
                            default=os.getcwd())
 
-    argparser.add_argument("--input","-i",
+    argparser.add_argument("--input", "-i",
                            type=str,
                            nargs='+',
                            help='Specify randomise out corrp files. If this \
-                                 option is given, --directory input is ignored')
+                           option is given, --directory input is ignored')
 
-    argparser.add_argument("--threshold","-t",
+    argparser.add_argument("--threshold", "-t",
                            type=float,
                            help='Threshold for the significance',
                            default=0.95)
 
-    argparser.add_argument("--contrast","-c",
+    argparser.add_argument("--contrast", "-c",
                            type=str,
                            help='Contrast file used for the randomise.')
 
-    argparser.add_argument("--matrix","-m",
+    argparser.add_argument("--matrix", "-m",
                            type=str,
                            help='Matrix file used for the randomise')
 
@@ -736,29 +740,23 @@ if __name__ == '__main__':
                            help='Print average in the significant cluster for \
                            all subjects')
 
-    argparser.add_argument("--merged_img_dir", "-p",
+    argparser.add_argument("--merged_img_dir", "-merged_image_d",
                            type=str,
                            help='Directory that contains merged files')
 
-    argparser.add_argument("--atlasquery","-a",
+    argparser.add_argument("--merged_image", "-merged_image",
+                           type=str,
+                           help='Directory that contains merged files')
+
+    argparser.add_argument("--atlasquery", "-a",
                            action='store_true',
                            help='Run atlas query on significant corrp files')
 
-    argparser.add_argument("--figure","-f",
+    argparser.add_argument("--figure", "-f",
                            action='store_true',
                            help='Create figures')
 
     args = argparser.parse_args()
-
-
-    # detect template
-    if args.template != 'enigma':
-        print(f'Study specific template : {args.template}')
-    else:
-        print(f'ENIGMA template')
-
-    if not args.merged_img_dir:
-        args.merged_img_dir = args.directory
 
     # if separate corrp image is given
     if args.input:
@@ -813,6 +811,10 @@ if __name__ == '__main__':
             corrpMap.update_with_contrast()
 
 
+    # get merged image files
+    if not args.merged_img_dir:
+        args.merged_img_dir = args.directory
+
     # if subject_values option is given
     if args.subject_values:
         print_head('Values extracted for each subject')
@@ -822,9 +824,20 @@ if __name__ == '__main__':
                 print('-'*80)
                 print(corrpMap.name)
                 print(corrpMap.modality)
-                # find merged_4d_file
-                merged_4d_file = list(Path(args.merged_img_dir).glob(
-                    f'*all*_{corrpMap.modality}[_.]*nii.gz'))[0]
+                try:
+                    # find merged_4d_file
+                    merged_4d_file = list(Path(args.merged_img_dir).glob(
+                        f'*all*_{corrpMap.modality}[_.]*nii.gz'))[0]
+                except:
+                    print("missing all merged file")
+                    # questions = [
+                            # inquirer.List(
+                                # 'merged 4d file',
+                                # message="Merged 4d file",
+                                # choices=[],
+                                # )),
+                            # ]
+                    merged_4d_file = inquirer.prompt(questions)
                 corrpMap.merged_4d_file = merged_4d_file
                 corrpMap.update_with_4d_data()
                 values_df = pd.concat([values_df,
