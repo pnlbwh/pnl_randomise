@@ -890,7 +890,7 @@ if __name__ == '__main__':
                 print_df(corrpMap.df_query)
 
     # If figure option is on
-    if args.figure:
+    if args.figure or args.tbss_fill:
         print_head('Saving figures')
         for corrpMap in corrp_map_classes:
             if corrpMap.significant == True:
@@ -902,6 +902,7 @@ if __name__ == '__main__':
                 # dark figure background
                 plt.style.use('dark_background')
 
+                # title
                 try:
                     corrpMap.fig.suptitle(
                         f'{corrpMap.modality} {corrpMap.contrast_text}\n'\
