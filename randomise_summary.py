@@ -12,6 +12,7 @@ import numpy as np
 from os import environ
 import os
 import sys
+import tempfile
 
 pd.set_option('mode.chained_assignment', None)
 
@@ -638,20 +639,26 @@ class CorrpMap(RandomiseRun):
 
         # Get the slice numbers in array
         nslice = self.ncols * self.nrows
-        slice_nums = np.arange(z_slice_center-(nslice * slice_gap), 
-                               z_slice_center+(nslice * slice_gap), 
+        slice_nums = np.arange(z_slice_center-(nslice * slice_gap),
+                               z_slice_center+(nslice * slice_gap),
                                slice_gap)[::2]
 
-        # Make voxels with their intensities lower than data_vmin 
-        # transparent
-        data = np.where(self.corrp_data < self.threshold, 
-                        np.nan, 
-                        self.corrp_data)
-        self.enigma_skeleton_data = np.where(
-            self.enigma_skeleton_data < 1, 
-            np.nan, 
-            self.enigma_skeleton_data)
+        # if corrpMap.corrp_data_filled exist
+        if hasattr(self, 'corrp_data_filled'):
+            data = np.where(self.corrp_data_filled != 0,
+                            self.corrp_data_filled,
+                            np.nan)
+        else:
+            # Make voxels with their intensities lower than data_vmin
+            # transparent
+            data = np.where(self.corrp_data < self.threshold,
+                            np.nan,
+                            self.corrp_data)
 
+        self.enigma_skeleton_data = np.where(
+            self.enigma_skeleton_data < 1,
+            np.nan,
+            self.enigma_skeleton_data)
 
         # Make fig and axes
         fig, axes = plt.subplots(ncols=self.ncols, 
@@ -696,6 +703,13 @@ class CorrpMap(RandomiseRun):
 
         self.fig = fig
         self.axes = axes
+
+    def tbss_fill(self, outfile):
+        command = f'tbss_fill  \
+                {self.corrp_file} \
+                {self.threshold} \
+                {self.mean_fa_loc} {outfile}'
+        os.popen(command).read()
 
 
 if __name__ == '__main__':
@@ -894,6 +908,13 @@ if __name__ == '__main__':
         print_head('Saving figures')
         for corrpMap in corrp_map_classes:
             if corrpMap.significant == True:
+                # tbss_fill if tbss_fill=True
+                if args.tbss_fill:
+                    # run tbss_fill
+                    tbss_fill_out = tempfile.NamedTemporaryFile()
+                    corrpMap.tbss_fill(tbss_fill_out.name)
+                    corrpMap.corrp_data_filled = nb.load(tbss_fill_out.name).get_data()
+
                 if args.template == 'enigma':
                     corrpMap.get_figure_enigma()
                 else:
