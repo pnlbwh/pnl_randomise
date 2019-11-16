@@ -314,6 +314,13 @@ class CorrpMap(RandomiseRun):
         self.HO_sub_thr0_1mm = self.HO_dir / \
                 'HarvardOxford-sub-maxprob-thr0-1mm.nii.gz'
 
+        # enigma FA map - background settings
+        self.enigma_dir = Path('/data/pnl/soft/pnlpipe3/tbss/data/enigmaDTI')
+        self.enigma_fa_loc = self.enigma_dir / 'ENIGMA_DTI_FA.nii.gz'
+        self.enigma_skeleton_mask_loc = self.enigma_dir / \
+                'ENIGMA_DTI_FA_skeleton_mask.nii.gz'
+
+
         self.check_significance()
         if self.significant:
             self.get_significant_info()
@@ -596,12 +603,6 @@ class CorrpMap(RandomiseRun):
     def get_figure_enigma(self, **kwargs):
         """Fig and axes attribute to CorrpMap"""
 
-        # enigma FA map - background settings
-        self.enigma_dir = Path('/data/pnl/soft/pnlpipe3/tbss/data/enigmaDTI')
-        self.enigma_fa_loc = self.enigma_dir / 'ENIGMA_DTI_FA.nii.gz'
-        self.enigma_skeleton_mask_loc = self.enigma_dir / \
-                'ENIGMA_DTI_FA_skeleton_mask.nii.gz'
-
         # if study template is not ENIGMA
         if 'mean_fa' in kwargs:
             mean_fa_loc = kwargs.get('mean_fa')
@@ -706,7 +707,7 @@ class CorrpMap(RandomiseRun):
 
     def tbss_fill(self, outfile):
         command = f'tbss_fill  \
-                {self.corrp_file} \
+                {self.location} \
                 {self.threshold} \
                 {self.mean_fa_loc} {outfile}'
         os.popen(command).read()
