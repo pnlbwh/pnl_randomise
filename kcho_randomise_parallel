@@ -158,18 +158,15 @@ fi
 # Submit multiple bsubs rather than submitting single bsub
 # This is because randomise within the randomise_parallel does not 
 # take advantage of having multiple threads assigned to them.
-#/data/pnl/kcho/PNL_kcho/kcho_bsub_shell_lines.py \
-    #-i ${DIRNAME}/${BASENAME}.generate \
-    #-q short \
-    #-t ${BASENAME}_randParall \
-    #-e ${lsf_out_dir}/${BASENAME}-%J-%I.err \
-    #-o ${lsf_out_dir}/${BASENAME}-%J-%I.out
+
+# kcho_bsub_shell_lines is required because -t must have numbering in its name
+# in order to control stage_2 from executing
 /data/pnl/kcho/PNL_kcho/kcho_bsub_shell_lines.py \
     -i ${DIRNAME}/${BASENAME}.generate \
     -q medium \
-    -t ${BASENAME}_randParall \
-    -e ${lsf_out_dir}/${BASENAME}-%J-%I.err \
-    -o ${lsf_out_dir}/${BASENAME}-%J-%I.out
+    -t ${DIRNAME}_${BASENAME}_randParall \
+    -e ${lsf_out_dir}/${DIRNAME}-${BASENAME}-%J-%I.err \
+    -o ${lsf_out_dir}/${DIRNAME}-${BASENAME}-%J-%I.out
 
 #stage2:
 cat <<combineScript > ${DIRNAME}/${BASENAME}.defragment
@@ -238,7 +235,6 @@ fi
 # commented out
 #fsl_sub -j $GENERATE_ID -T ${DEFRAGMENT_TIME} -l ${DIRNAME}/${BASENAME}_logs/ -N ${BASENAME}.defragment ${DIRNAME}/${BASENAME}.defragment
 
-ended_lines=`echo ended\(${BASENAME}_randParall_1\)`
 # CURRENT_SEED is one greater than the number of split jobs
 # CURRENT_SEED - 1 : number of split jobs
 # CURRNET_SEED - 2 : match the bsub id number that starts from 0
@@ -250,27 +246,22 @@ total_number_of_seed=`echo "$((${number_of_seed} * ${number_of_contrast}))"`
 total_number_of_seed=`expr ${total_number_of_seed} - 1`
 
 
-for num in `seq  0 ${total_number_of_seed}`
+# create `ended_lines` variable which contains the name of ended jobs
+# eg) ended(/data/pnl/kcho/Lupus/TBSS/Tashrif/tbss/prac_parallel/tbss_FA_randParall_0) && ended(/data/pnl/kcho/Lupus/TBSS/Tashrif/tbss/prac_parallel/tbss_FA_randParall_1) && ...
+# below line is needed to start the dependency test with 'ended(...'
+ended_lines=`echo ended\(${DIRNAME}_${BASENAME}_randParall_0\)` 
+for num in `seq  1 ${total_number_of_seed}`
 do
     echo ${num}
-    ended_lines=`echo ${ended_lines} \&\& ended\(${BASENAME}_randParall_${num}\)`
+    ended_lines=`echo ${ended_lines} \&\& ended\(${DIRNAME}_${BASENAME}_randParall_${num}\)`
 done
 
-#/hptc_cluster/lsf/8.0/linux2.6-glibc2.3-x86_64/bin/bsub \
-    #-K \
-    #-q short \
-    #-w  "${ended_lines}" \
-    #-J randParall_part2 \
-    #-n 1 \
-    #-e ${lsf_out_dir}/${BASENAME}-%J-%I.err \
-    #-o ${lsf_out_dir}/${BASENAME}-%J-%I.out  < ${DIRNAME}/${BASENAME}.defragment 
-    #-K \
+# run part 2
+# TODO : this part is very light - could be moved to running in shell without bsub
 /hptc_cluster/lsf/8.0/linux2.6-glibc2.3-x86_64/bin/bsub \
     -q medium \
     -w  "${ended_lines}" \
     -J randParall_part2 \
     -n 1 \
-    -e ${lsf_out_dir}/${BASENAME}-%J-%I.err \
-    -o ${lsf_out_dir}/${BASENAME}-%J-%I.out < ${DIRNAME}/${BASENAME}.defragment 
-
-#echo /hptc_cluster/lsf/8.0/linux2.6-glibc2.3-x86_64/bin/bsub  -K  -w  "${ended_lines}"  -J randParall_part2  -n 1  -e ${lsf_out_dir}/${BASENAME}-%J-%I.err  -o ${lsf_out_dir}/${BASENAME}-%J-%I.out  < ${DIRNAME}/${BASENAME}.defragment 
+    -e ${lsf_out_dir}/${DIRNAME}-${BASENAME}-%J-%I.err \
+    -o ${lsf_out_dir}/${DIRNAME}-${BASENAME}-%J-%I.out < ${DIRNAME}/${BASENAME}.defragment 

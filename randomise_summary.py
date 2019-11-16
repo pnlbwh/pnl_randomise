@@ -11,6 +11,7 @@ import re
 import numpy as np
 from os import environ
 import os
+import sys
 
 pd.set_option('mode.chained_assignment', None)
 
@@ -296,7 +297,7 @@ class CorrpMap(RandomiseRun):
         # if modality is included in its name
         try:
             self.modality = re.search(
-                '.*(FW|FA|MD|RD|AD|MD|FAt|MDt|RDt|ADt|MDt)_',
+                '.*(FW|FA|MD|RD|AD|MD|FAt|FAc|FAk|MK|MKc|MKk|MDt|RDt|ADt|MDt)_',
                 self.location.name).group(1)
         except:
             self.modality = ''
@@ -829,7 +830,8 @@ if __name__ == '__main__':
                     merged_4d_file = list(Path(args.merged_img_dir).glob(
                         f'*all*_{corrpMap.modality}[_.]*nii.gz'))[0]
                 except:
-                    print("missing all merged file")
+                    # print("missing all merged file")
+                    sys.exit('missing all merged file')
                     # questions = [
                             # inquirer.List(
                                 # 'merged 4d file',
@@ -837,7 +839,7 @@ if __name__ == '__main__':
                                 # choices=[],
                                 # )),
                             # ]
-                    merged_4d_file = inquirer.prompt(questions)
+                    # merged_4d_file = inquirer.prompt(questions)
                 corrpMap.merged_4d_file = merged_4d_file
                 corrpMap.update_with_4d_data()
                 values_df = pd.concat([values_df,
