@@ -3,6 +3,11 @@
 from pathlib import Path
 import tempfile
 
+# figures
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+from scipy import ndimage
+
 # Imaging
 import nibabel as nb
 import argparse
@@ -12,21 +17,12 @@ import numpy as np
 from os import environ
 import os
 import sys
-import tempfile
-
-pd.set_option('mode.chained_assignment', None)
-
-# figures
-import matplotlib as mpl
-mpl.use('Agg')
-import matplotlib.pyplot as plt
-from scipy import ndimage
 
 # utils
-from fsl_randomise_utils import *
+from fsl_randomise_utils import print_df, print_head
 
-# new options
-import inquirer
+mpl.use('Agg')
+pd.set_option('mode.chained_assignment', None)
 
 '''
 TODO:
@@ -44,11 +40,11 @@ TODO:
 
 class RandomiseRun:
     """Randomise output class
-    
+
     Used to contain information about FSL randomise run.
 
     Key arguments:
-    location -- str or Path object of a randomise output location. 
+    location -- str or Path object of a randomise output location.
               Preferably with a 'design.con' and 'design.mat' inside.
               (default:'.')
     contrast_file -- design contrast file used as the input for randomise.
@@ -82,46 +78,44 @@ class RandomiseRun:
         else:
             self.contrast_file = Path(contrast_file)
 
-
     def get_contrast_info(self):
         """Read design contrast file into a numpy array
 
-        self.contrast_array : numpy array of the contrast file excluding the 
+        self.contrast_array : numpy array of the contrast file excluding the
                            headers
         """
 
         with open(self.contrast_file, 'r') as f:
             lines = f.readlines()
-            headers = [x for x in lines \
+            headers = [x for x in lines
                        if x.startswith('/')]
 
         last_header_line_number = lines.index(headers[-1]) + 1
-        self.contrast_array = np.loadtxt(self.contrast_file, 
+        self.contrast_array = np.loadtxt(self.contrast_file,
                                          skiprows=last_header_line_number)
-
 
     def get_contrast_info_english(self):
         """Read design contrast file into a numpy array
 
-        self.contrast_lines : attributes that states what each row in the 
+        self.contrast_lines : attributes that states what each row in the
                            contrast array represents
        TODO:
            select group columns
         """
 
-        # if all lines are group comparisons --> 
+        # if all lines are group comparisons -->
         # simple group comparisons or interaction effect
-        if (self.contrast_array.sum(axis=1)==0).all() :
-            #TODO : do below at the array level?
+        if (self.contrast_array.sum(axis=1) == 0).all():
+            # TODO : do below at the array level?
             df_tmp = pd.DataFrame(self.contrast_array)
             self.contrast_lines = []
             for contrast_num, row in df_tmp.iterrows():
                 # name of the column with value of 1
-                pos_col_num = row[row==1].index.values[0]
-                neg_col_num = row[row==-1].index.values[0]
+                pos_col_num = row[row == 1].index.values[0]
+                neg_col_num = row[row == -1].index.values[0]
 
-                #if interaction : they have zeros in the group column
-                #TODO : make this more efficient later
+                # if interaction : they have zeros in the group column
+                # TODO : make this more efficient later
                 half_cols = (self.contrast_array.shape[0] / 2) + 1
                 if pos_col_num not in list(range(int(half_cols+1))):
                     if pos_col_num < neg_col_num:
@@ -136,20 +130,19 @@ class RandomiseRun:
                     else:
                         text = f'Group {neg_col_num+1} < Group {pos_col_num+1}'
                 self.contrast_lines.append(text)
-        #TODO add interaction information
+        # TODO add interaction information
         # if group column is zero
-        #0   0   1    -1
-
+        # 0   0   1    -1
 
         # if all rows sum to 1 --> the correlation contrast
         # TODO: there is a positibility of having 0.5 0.5?
-        elif (np.absolute(self.contrast_array.sum(axis=1))==1).all():
-            #TODO : do below at the array level?
+        elif (np.absolute(self.contrast_array.sum(axis=1)) == 1).all():
+            # TODO : do below at the array level?
             df_tmp = pd.DataFrame(self.contrast_array)
             self.contrast_lines = []
             for contrast_num, row in df_tmp.iterrows():
                 # name of the column with value of 1
-                col_num = row[row!=0].index.values[0]
+                col_num = row[row != 0].index.values[0]
 
                 # Change order of columns according to their column numbers
                 if row.loc[col_num] == 1:
@@ -158,14 +151,11 @@ class RandomiseRun:
                     text = f'Negatively correlated with col {col_num+1}'
                 self.contrast_lines.append(text)
 
-
         print(self.contrast_lines)
 
     def get_matrix_info(self):
         """Read design matrix file into a numpy array and summarize
- _kcho       
-        attributes added
-        'matrix_header' : headers in the matrix file 
+        'matrix_header' : headers in the matrix file
         'matrix_array' : numpy array matrix part of the matrix file
         'matrix_df' : pandas dataframe of matrix array
 
@@ -188,25 +178,26 @@ class RandomiseRun:
             [x[1:].strip() for x in self.matrix_header])
 
         the_line_with_matrix = lines.index('/Matrix') + 1
-        self.matrix_array = np.loadtxt(self.matrix_file, 
+        self.matrix_array = np.loadtxt(self.matrix_file,
                                        skiprows=the_line_with_matrix)
 
         # matrix array into pandas dataframe
         self.matrix_df = pd.DataFrame(self.matrix_array)
         # rename columns to have 'col ' in each
-        self.matrix_df.columns = [f'col {x}' for x in \
-                                        self.matrix_df.columns]
+        self.matrix_df.columns = [f'col {x}' for x in
+                                  self.matrix_df.columns]
         # summarize matrix
         self.matrix_info = self.matrix_df.describe()
-        self.matrix_info = self.matrix_info.loc[['mean', 'std', 'min', 'max'],:]
+        self.matrix_info = self.matrix_info.loc[
+                ['mean', 'std', 'min', 'max'], :]
         self.matrix_info = self.matrix_info.round(decimals=2)
 
-        # For each column of the matrix, add counts of unique values to 
-        # self.matrix_info 
+        # For each column of the matrix, add counts of unique values to
+        # self.matrix_info
         for col in self.matrix_df.columns:
-            # create a dataframe that contains unique values as the index 
+            # create a dataframe that contains unique values as the index
             unique_values = self.matrix_df[col].value_counts().sort_index()
-            # If there are less unique values than the half the number of 
+            # If there are less unique values than the half the number of
             # all data  for the column
             if len(unique_values) < len(self.matrix_df) / 2:
                 # unique values as an extra row
@@ -218,14 +209,14 @@ class RandomiseRun:
             # If there are 5 or more unique values in the column, leave the
             else:
                 # 'unique' and 'count' as 'continuous values'
-                self.matrix_info.loc['unique values', col] = 'continuous values'
+                self.matrix_info.loc['unique values', col] = \
+                        'continuous values'
                 self.matrix_info.loc['count', col] = 'continuous values'
-
 
         # define which column represent group column
         # Among columns where their min value is 0 and max value is 1,
-        min_0_max_1_col = [x for x in self.matrix_df.columns \
-                           if self.matrix_df[x].isin([0,1]).all()]
+        min_0_max_1_col = [x for x in self.matrix_df.columns
+                           if self.matrix_df[x].isin([0, 1]).all()]
 
         if 'col 0' not in min_0_max_1_col:
             print("Group Column is not in the first column")
@@ -233,11 +224,11 @@ class RandomiseRun:
             self.group_cols = ['no group col']
 
         else:
-            # if sum of each row equal to 1, these columns would highly likely 
+            # if sum of each row equal to 1, these columns would highly likely
             # be group columns
             if (self.matrix_df[min_0_max_1_col].sum(axis=1) == 1).all():
                 self.group_cols = min_0_max_1_col
-            # If not, remove a column from the list of columns at the end, and 
+            # If not, remove a column from the list of columns at the end, and
             # test whether each row sums to 1
             elif (self.matrix_df[min_0_max_1_col[:-1]].sum(axis=1) == 1).all():
                 self.group_cols = min_0_max_1_col[:-1]
@@ -254,19 +245,17 @@ class RandomiseRun:
                 self.matrix_info.loc['unique', col] = f"Group {group_num}"
                 # count of each unique value as an extra row
                 self.matrix_info.loc['count', col] = \
-                        (self.matrix_df[col]==1).sum()
-
+                    (self.matrix_df[col] == 1).sum()
 
     def get_corrp_files(self):
-        """Find corrp files and return a list of Path objects 
+        """Find corrp files and return a list of Path objects
         """
         corrp_ps = list(self.location.glob('*corrp*.nii.gz'))
         # remove corrp files that are produced in the parallel randomise
-        self.corrp_ps = [str(x) for x in corrp_ps if not 'SEED' in x.name]
+        self.corrp_ps = [str(x) for x in corrp_ps if 'SEED' not in x.name]
 
         if len(self.corrp_ps) == 0:
-            print(f'There is no corrected p-maps in {rand_loc}')
-
+            print(f'There is no corrected p-maps in {self.location}')
 
     def print_matrix_info(self):
         print_head('Matrix summary')
@@ -278,8 +267,6 @@ class RandomiseRun:
         print_df(self.matrix_info)
 
 
-
-
 class CorrpMap(RandomiseRun):
     """Multiple comparison corrected randomise output class
 
@@ -289,7 +276,6 @@ class CorrpMap(RandomiseRun):
     loc -- str or Path object, location for the corrp map.
     threshold -- float, 1-p threhold for significance.
     """
-
 
     def __init__(self, location, threshold):
         self.location = Path(location)
@@ -303,8 +289,8 @@ class CorrpMap(RandomiseRun):
         except:
             self.modality = ''
         self.threshold = threshold
-        self.test_kind = re.search('(\w)stat\d+.nii.gz', self.name).group(1)
-        self.stat_num = re.search('(\d+).nii.gz', self.name).group(1)
+        self.test_kind = re.search(r'(\w)stat\d+.nii.gz', self.name).group(1)
+        self.stat_num = re.search(r'(\d+).nii.gz', self.name).group(1)
 
         # Below variables are to estimate number of significant voxels in each
         # hemisphere
@@ -312,21 +298,19 @@ class CorrpMap(RandomiseRun):
         self.fsl_data_dir = self.fsl_dir / 'data'
         self.HO_dir = self.fsl_data_dir / 'atlases' / 'HarvardOxford'
         self.HO_sub_thr0_1mm = self.HO_dir / \
-                'HarvardOxford-sub-maxprob-thr0-1mm.nii.gz'
+            'HarvardOxford-sub-maxprob-thr0-1mm.nii.gz'
 
         # enigma FA map - background settings
         self.enigma_dir = Path('/data/pnl/soft/pnlpipe3/tbss/data/enigmaDTI')
         self.enigma_fa_loc = self.enigma_dir / 'ENIGMA_DTI_FA.nii.gz'
         self.enigma_skeleton_mask_loc = self.enigma_dir / \
-                'ENIGMA_DTI_FA_skeleton_mask.nii.gz'
-
+            'ENIGMA_DTI_FA_skeleton_mask.nii.gz'
 
         self.check_significance()
         if self.significant:
             self.get_significant_info()
             self.get_significant_overlap_with_HO()
         self.make_df()
-
 
     def check_significance(self):
         """Check whether there is any significant voxel"""
@@ -344,9 +328,9 @@ class CorrpMap(RandomiseRun):
         # Discrepancy between numpy and FSL
         if len(data[(data < 0.95) & (data >= 0.9495)]) != 0:
             self.threshold = self.threshold - 0.00001
-            print('There are voxels with p value between 0.9495 and 0.05. '\
-                  'These numbers are rounded up in FSL to 0.95. Threfore '\
-                  'to match to the FSL outputs, changing the threshold to '\
+            print('There are voxels with p value between 0.9495 and 0.05. '
+                  'These numbers are rounded up in FSL to 0.95. Threfore '
+                  'to match to the FSL outputs, changing the threshold to '
                   '(threshold - 0.00001)')
 
         # any voxels significant?
@@ -357,7 +341,6 @@ class CorrpMap(RandomiseRun):
         else:
             self.significant = False
 
-
     def get_significant_info(self):
         """Get information of significant voxels"""
         # total number of voxels in the skeleton
@@ -365,19 +348,18 @@ class CorrpMap(RandomiseRun):
 
         # number of significant voxels: greater or equal to 0.95 by default
         self.significant_voxel_num = \
-                np.count_nonzero(self.corrp_data >= self.threshold)
+            np.count_nonzero(self.corrp_data >= self.threshold)
 
         # number of significant voxels / number of all voxels
         self.significant_voxel_percentage = \
-                (self.significant_voxel_num / np.count_nonzero(self.corrp_data)) \
-                * 100
+            (self.significant_voxel_num / np.count_nonzero(self.corrp_data)) \
+            * 100
 
         # summary of significant voxels
         sig_vox_array = self.corrp_data[self.corrp_data >= self.threshold]
         self.significant_voxel_mean = 1 - sig_vox_array.mean()
         self.significant_voxel_std = sig_vox_array.std()
         self.significant_voxel_max = 1 - sig_vox_array.max()
-
 
     def get_significant_overlap_with_HO(self):
         """Get overlap information of significant voxels with Harvard Oxford"""
@@ -389,9 +371,11 @@ class CorrpMap(RandomiseRun):
         # Few voxels from ENIGMA template skeleton spreads into the area
         # defined as a gray matter by Harvard Oxford atlas
         try:
-            left_mask_array = np.where((HO_data==1) + (HO_data==2), 1, 0)
+            left_mask_array = np.where((HO_data == 1) +
+                                       (HO_data == 2), 1, 0)
             left_skeleton_array = self.corrp_data * left_mask_array
-            right_mask_array = np.where((HO_data==12) + (HO_data==13), 1, 0)
+            right_mask_array = np.where((HO_data == 12) +
+                                        (HO_data == 13), 1, 0)
             right_skeleton_array = self.corrp_data * right_mask_array
 
             # count significant voxels in each hemispheres
@@ -404,42 +388,41 @@ class CorrpMap(RandomiseRun):
                 self.significant_voxel_left_percent = 0
             else:
                 self.significant_voxel_left_percent = (
-                    self.significant_voxel_left_num / \
+                    self.significant_voxel_left_num /
                     np.count_nonzero(left_skeleton_array)) * 100
 
             if np.count_nonzero(right_skeleton_array) == 0:
                 self.significant_voxel_right_percent = 0
             else:
                 self.significant_voxel_right_percent = (
-                    self.significant_voxel_right_num / \
+                    self.significant_voxel_right_num /
                     np.count_nonzero(right_skeleton_array)) * 100
         except:
-            print('** This study has a specific template. The number of '\
-                  'significant voxels in the left and right hemisphere '\
+            print('** This study has a specific template. The number of '
+                  'significant voxels in the left and right hemisphere '
                   'will not be estimated')
             self.significant_voxel_right_percent = 'unknown'
             self.significant_voxel_left_percent = 'unknown'
-
 
     def make_df(self):
         """Make summary pandas df of each corrp maps"""
         if self.significant:
             self.df = pd.DataFrame({
-                'file name':[self.name],
-                'Test':self.test_kind,
-                'Modality':self.modality,
-                'Stat num':self.stat_num,
-                'Significance':self.significant,
-                'Sig Max':self.voxel_max_p,
-                'Sig Mean':self.significant_voxel_mean,
-                'Sig Std':self.significant_voxel_std,
-                '% significant voxels':self.significant_voxel_percentage,
-                '% left':self.significant_voxel_left_percent,
-                '% right':self.significant_voxel_right_percent
+                'file name': [self.name],
+                'Test': self.test_kind,
+                'Modality': self.modality,
+                'Stat num': self.stat_num,
+                'Significance': self.significant,
+                'Sig Max': self.voxel_max_p,
+                'Sig Mean': self.significant_voxel_mean,
+                'Sig Std': self.significant_voxel_std,
+                '% significant voxels': self.significant_voxel_percentage,
+                '% left': self.significant_voxel_left_percent,
+                '% right': self.significant_voxel_right_percent
             })
 
             # round up columns that stars with percent
-            for percent_col in [x for x in self.df.columns \
+            for percent_col in [x for x in self.df.columns
                                 if x.startswith('%')]:
                 try:
                     self.df[percent_col] = self.df[percent_col].round(
@@ -448,31 +431,30 @@ class CorrpMap(RandomiseRun):
                     pass
         else:
             self.df = pd.DataFrame({
-                'file name':[self.name],
-                'Test':self.test_kind,
-                'Modality':self.modality,
-                'Stat num':self.stat_num,
-                'Significance':self.significant,
-                'Sig Max':self.voxel_max_p,
+                'file name': [self.name],
+                'Test': self.test_kind,
+                'Modality': self.modality,
+                'Stat num': self.stat_num,
+                'Significance': self.significant,
+                'Sig Max': self.voxel_max_p,
             })
-
 
     def update_with_contrast(self):
         '''Update CorrpMap class when there the contrast file is available
         (when self.contrast_array is available)
 
         Keyword argument
-        contrast_array : numpy array, of the design contrast file. Created 
-                         by loading only the contrast lines text using 
+        contrast_array : numpy array, of the design contrast file. Created
+                         by loading only the contrast lines text using
                          np.loadtxt.
         '''
         # Contrast map
         line_num = int(self.stat_num)-1
-    
-        self.contrast_line = self.contrast_array[line_num,:]
+
+        self.contrast_line = self.contrast_array[line_num, :]
         self.contrast_text = self.contrast_lines[line_num]
 
-        self.df['contrast'] = np.array2string(self.contrast_line, 
+        self.df['contrast'] = np.array2string(self.contrast_line,
                                               precision=2)[1:-1]
         try:
             self.df['contrast_text'] = self.contrast_lines[line_num]
@@ -484,25 +466,24 @@ class CorrpMap(RandomiseRun):
             try:
                 with open(str(self.location.parent / 'design.fts'), 'r') as f:
                     lines = f.readlines()
-                    design_fts_line = [x for x in lines 
-                                      if re.search('^\d', x)][0]
+                    design_fts_line = [x for x in lines
+                                       if re.search(r'^\d', x)][0]
                 self.df['contrast'] = '* ' + design_fts_line
             except:
                 self.df['contrast'] = 'f-test'
 
         # Reorder self.df to have file name and the contrast on the left
-        self.df = self.df[['file name', 'contrast', 'contrast_text'] + \
-                [x for x in self.df.columns if not x in ['file name',
-                                                         'contrast',
-                                                         'contrast_text']]]
+        self.df = self.df[['file name', 'contrast', 'contrast_text'] +
+                          [x for x in self.df.columns if x not in
+                              ['file name',
+                               'contrast',
+                               'contrast_text']]]
         return self.df
-
 
     def get_significant_cluster(self):
         """Get binary array of significant cluster"""
         self.significant_cluster_data = np.where(
             self.corrp_data >= self.threshold, 1, 0)
-
 
     def update_with_4d_data(self):
         """get mean values for skeleton files in the significant voxels
@@ -511,9 +492,9 @@ class CorrpMap(RandomiseRun):
             skeleton_files: list of Path objects, skeleton file locations.
 
         Retrun:
-            df: pandas dataframe of 
+            df: pandas dataframe of
                 'corrp_file', 'skeleton_file', 'average'
-        TODO: 
+        TODO:
             - save significant voxels
             - parallelize
             - think about using all_modality_merged images?
@@ -662,49 +643,49 @@ class CorrpMap(RandomiseRun):
             self.enigma_skeleton_data)
 
         # Make fig and axes
-        fig, axes = plt.subplots(ncols=self.ncols, 
-                                 nrows=self.nrows, 
+        fig, axes = plt.subplots(ncols=self.ncols,
+                                 nrows=self.nrows,
                                  figsize=(size_w * self.ncols,
                                           size_h * self.nrows),
                                  dpi=150)
-
 
         # For each axis
         for num, ax in enumerate(np.ravel(axes)):
             # background FA map
             img = ax.imshow(
-                np.flipud(self.enigma_fa_data[:,:,slice_nums[num]].T),
+                np.flipud(self.enigma_fa_data[:, :, slice_nums[num]].T),
                 cmap='gray')
 
             # background skeleton
             img = ax.imshow(
-                np.flipud(self.enigma_skeleton_data[:,:,slice_nums[num]].T),
+                np.flipud(self.enigma_skeleton_data[:, :, slice_nums[num]].T),
                 cmap='ocean')
 
             # main data
             if hasattr(self, 'corrp_data_filled'):
                 # tbss_fill FA maps
-                img = ax.imshow(np.flipud(data[:,:,slice_nums[num]].T), 
+                img = ax.imshow(np.flipud(data[:, :, slice_nums[num]].T),
                                 cmap='autumn',
                                 vmin=0,
                                 vmax=1)
             else:
                 # stat maps
-                img = ax.imshow(np.flipud(data[:,:,slice_nums[num]].T), 
+                img = ax.imshow(np.flipud(data[:, :, slice_nums[num]].T),
                                 cmap='autumn',
                                 vmin=self.threshold,
                                 vmax=1)
             ax.axis('off')
-            ax.annotate('z = {}'.format(slice_nums[num]), 
-                        (0.01, 0.1), 
-                        xycoords='axes fraction', 
+            ax.annotate('z = {}'.format(slice_nums[num]),
+                        (0.01, 0.1),
+                        xycoords='axes fraction',
                         color='white')
 
         fig.subplots_adjust(hspace=0, wspace=0)
 
         axbar = fig.add_axes([0.9, 0.2, 0.03, 0.6])
         cb = fig.colorbar(img, axbar)
-        cbytick_obj = plt.getp(cb.ax, 'yticklabels') #Set y tick label color
+        # Set y tick label color
+        cbytick_obj = plt.getp(cb.ax, 'yticklabels')
 
         plt.setp(cbytick_obj, color='white')
         cb.outline.set_edgecolor('white')
@@ -795,15 +776,15 @@ if __name__ == '__main__':
         corrpMaps = [Path(x) for x in args.input]
         corrp_map_classes = [CorrpMap(x, args.threshold) for x in corrpMaps]
         if args.matrix and args.contrast:
-            map(lambda x: setattr(x, matrix_file, args.matrix), 
+            map(lambda x: setattr(x, matrix_file, args.matrix),
                 corrp_map_classes)
-            map(lambda x: setattr(x, 'contrast_file', args.contrast), 
+            map(lambda x: setattr(x, 'contrast_file', args.contrast),
                 corrp_map_classes)
             map(lambda x: x.get_matrix_info(), corrp_map_classes)
             map(lambda x: x.get_contrast_info(), corrp_map_classes)
             print('a=>ah')
             map(lambda x: x.get_contrast_info_english(), corrp_map_classes)
-            #corrp_map_classes[0].print_matrix_info()
+            # corrp_map_classes[0].print_matrix_info()
             map(lambda x: x.update_with_contrast(), corrp_map_classes)
         if args.contrast:
             map(lambda x: setattr(x, contrast_file, args.contrast), 
@@ -821,7 +802,7 @@ if __name__ == '__main__':
         elif args.contrast:
             randomiseRun = RandomiseRun(args.directory, args.contrast)
         elif args.matrix:
-            randomiseRun = RandomiseRun(args.directory, 
+            randomiseRun = RandomiseRun(args.directory,
                                         matrix_file=args.matrix)
         else:
             randomiseRun = RandomiseRun(args.directory)
@@ -841,7 +822,6 @@ if __name__ == '__main__':
             corrpMap.contrast_array = randomiseRun.contrast_array
             corrpMap.contrast_lines = randomiseRun.contrast_lines
             corrpMap.update_with_contrast()
-
 
     # get merged image files
     if not args.merged_img_dir:
@@ -877,22 +857,22 @@ if __name__ == '__main__':
                                        corrpMap.cluster_averages_df],
                                       axis=1)
 
-        # if any of corrp map had significant voxels 
+        # if any of corrp map had significant voxels
         try:
-            values_df = pd.concat([values_df, 
-                                   randomiseRun.matrix_df], 
+            values_df = pd.concat([values_df,
+                                   randomiseRun.matrix_df],
                                   axis=1)
             values_df.to_csv(
                 f'{randomiseRun.location}/values_extracted_for_all_subjects.csv'
             )
-            print(f'{randomiseRun.location}/'\
+            print(f'{randomiseRun.location}/'
                   'values_extracted_for_all_subjects.csv is created.')
         # if none of corrp map had significant voxels
         except:
             values_df.to_csv(
                 f'{randomiseRun.location}/values_extracted_for_all_subjects.csv'
             )
-            print(f'{randomiseRun.location}/'\
+            print(f'{randomiseRun.location}/'
                   'values_extracted_for_all_subjects.csv is created.')
 
         values_df.index = [f'subject {x+1}' for x in values_df.index]
@@ -902,7 +882,6 @@ if __name__ == '__main__':
     df = df.sort_values('file name')
     print_head('Result summary')
     print_df(df.set_index(df.columns[0]))
-
 
     # If atlas query option is on
     if args.atlasquery:
@@ -916,7 +895,7 @@ if __name__ == '__main__':
     if args.figure or args.tbss_fill:
         print_head('Saving figures')
         for corrpMap in corrp_map_classes:
-            if corrpMap.significant == True:
+            if corrpMap.significant is True:
                 # tbss_fill if tbss_fill=True
                 if args.tbss_fill:
                     print_head(f'Estimating tbss_fill for {corrpMap.location}')
@@ -937,19 +916,18 @@ if __name__ == '__main__':
                 # title
                 try:
                     corrpMap.fig.suptitle(
-                        f'{corrpMap.modality} {corrpMap.contrast_text}\n'\
-                        f'{corrpMap.location}', 
-                        y=0.95, 
+                        f'{corrpMap.modality} {corrpMap.contrast_text}\n'
+                        f'{corrpMap.location}',
+                        y=0.95,
                         fontsize=20)
                 except:
                     corrpMap.fig.suptitle(
-                        f'{corrpMap.modality}\n'\
-                        f'{corrpMap.location}', 
-                        y=0.95, 
+                        f'{corrpMap.modality}\n'
+                        f'{corrpMap.location}',
+                        y=0.95,
                         fontsize=20)
 
-
-                out_image_loc = re.sub('.nii.gz', '.png', 
+                out_image_loc = re.sub('.nii.gz', '.png',
                                        str(corrpMap.location))
                 print(out_image_loc)
                 corrpMap.fig.savefig(out_image_loc, dpi=100)
