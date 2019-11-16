@@ -682,10 +682,18 @@ class CorrpMap(RandomiseRun):
                 cmap='ocean')
 
             # main data
-            img = ax.imshow(np.flipud(data[:,:,slice_nums[num]].T), 
-                            cmap='autumn',
-                            vmin=self.threshold,
-                            vmax=1)
+            if hasattr(self, 'corrp_data_filled'):
+                # tbss_fill FA maps
+                img = ax.imshow(np.flipud(data[:,:,slice_nums[num]].T), 
+                                cmap='autumn',
+                                vmin=0,
+                                vmax=1)
+            else:
+                # stat maps
+                img = ax.imshow(np.flipud(data[:,:,slice_nums[num]].T), 
+                                cmap='autumn',
+                                vmin=self.threshold,
+                                vmax=1)
             ax.axis('off')
             ax.annotate('z = {}'.format(slice_nums[num]), 
                         (0.01, 0.1), 
@@ -709,8 +717,9 @@ class CorrpMap(RandomiseRun):
         command = f'tbss_fill  \
                 {self.location} \
                 {self.threshold} \
-                {self.mean_fa_loc} {outfile}'
-        os.popen(command).read()
+                {self.enigma_fa_loc} {outfile}; fslstats {outfile} -R'
+        print(command)
+        print(os.popen(command).read())
 
 
 if __name__ == '__main__':
@@ -911,8 +920,10 @@ if __name__ == '__main__':
             if corrpMap.significant == True:
                 # tbss_fill if tbss_fill=True
                 if args.tbss_fill:
+                    print_head(f'Estimating tbss_fill for {corrpMap.location}')
+
                     # run tbss_fill
-                    tbss_fill_out = tempfile.NamedTemporaryFile()
+                    tbss_fill_out = tempfile.NamedTemporaryFile(suffix='.nii.gz')
                     corrpMap.tbss_fill(tbss_fill_out.name)
                     corrpMap.corrp_data_filled = nb.load(tbss_fill_out.name).get_data()
 
