@@ -878,10 +878,17 @@ if __name__ == '__main__':
         values_df.index = [f'subject {x+1}' for x in values_df.index]
         print_df(values_df)
 
+    # printing result summaryt
     df = pd.concat([x.df for x in corrp_map_classes], sort=False)
     df = df.sort_values('file name')
     print_head('Result summary')
-    print_df(df.set_index(df.columns[0]))
+
+    if args.sig_only:
+        print_head('Only showing significant maps')
+        df_sig = df.groupby('Significance').get_group(True)
+        print_df(df_sig.set_index(df_sig.columns[0]))
+    else:
+        print_df(df.set_index(df.columns[0]))
 
     # If atlas query option is on
     if args.atlasquery:
