@@ -741,6 +741,10 @@ if __name__ == '__main__':
                            help='Print average in the significant cluster for \
                            all subjects')
 
+    argparser.add_argument("--sig_only", "-so",
+                           action='store_true',
+                           help='Print only the significant statistics')
+
     argparser.add_argument("--merged_img_dir", "-merged_image_d",
                            type=str,
                            help='Directory that contains merged files')
@@ -756,6 +760,10 @@ if __name__ == '__main__':
     argparser.add_argument("--figure", "-f",
                            action='store_true',
                            help='Create figures')
+
+    argparser.add_argument("--tbss_fill", "-ff",
+                           action='store_true',
+                           help='Create figures with tbss_fill outputs')
 
     args = argparser.parse_args()
 
