@@ -717,9 +717,8 @@ class CorrpMap(RandomiseRun):
         command = f'tbss_fill  \
                 {self.location} \
                 {self.threshold} \
-                {self.enigma_fa_loc} {outfile}; fslstats {outfile} -R'
-        print(command)
-        print(os.popen(command).read())
+                {self.enigma_fa_loc} {outfile}'
+        os.popen(command).read()
 
 
 if __name__ == '__main__':
