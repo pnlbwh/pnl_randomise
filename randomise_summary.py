@@ -247,6 +247,16 @@ class RandomiseRun:
                 self.matrix_info.loc['count', col] = \
                     (self.matrix_df[col] == 1).sum()
 
+    def get_corrp_files_glob_string(self, glob_string):
+        """Find corrp files and return a list of Path objects
+        """
+        corrp_ps = list(self.location.glob(glob_string))
+        # remove corrp files that are produced in the parallel randomise
+        self.corrp_ps = [str(x) for x in corrp_ps if 'SEED' not in x.name]
+
+        if len(self.corrp_ps) == 0:
+            print(f'There is no corrected p-maps in {self.location}')
+
     def get_corrp_files(self):
         """Find corrp files and return a list of Path objects
         """
@@ -749,6 +759,10 @@ if __name__ == '__main__':
                            action='store_true',
                            help='Print only the significant statistics')
 
+    argparser.add_argument("--f_only", "-fo",
+                           action='store_true',
+                           help='Print only the output from f-test')
+
     argparser.add_argument("--merged_img_dir", "-merged_image_d",
                            type=str,
                            help='Directory that contains merged files')
@@ -812,10 +826,15 @@ if __name__ == '__main__':
 
         randomiseRun.get_contrast_info()
         randomiseRun.get_contrast_info_english()
-        randomiseRun.get_corrp_files()
+
+        if args.f_only:
+            randomiseRun.get_corrp_files_glob_string('*corrp_f*.nii.gz')
+        else:
+            randomiseRun.get_corrp_files()
 
         corrpMaps = randomiseRun.corrp_ps
         corrp_map_classes = [CorrpMap(x, args.threshold) for x in corrpMaps]
+
         # TODO : WHY DOES NOT MAP WORK in updating 'df' attribute within a class
         #map(lambda x: setattr(x, df, x.update_with_contrast()), corrp_map_classes)
         for corrpMap in corrp_map_classes:
