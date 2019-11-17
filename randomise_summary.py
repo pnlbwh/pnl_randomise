@@ -783,7 +783,12 @@ class CorrpMap(RandomiseRun):
 
 
 def skeleton_summary(corrpMap):
-    """Make summary from corrpMap, using its merged_skeleton"""
+    """Make summary from corrpMap, using its merged_skeleton
+
+    TODO:
+        - difference of each binarized skeleton volume vs ENIGMA skeleton
+        - show differences
+    """
     mergedSkeleton = MergedSkeleton(str(corrpMap.merged_4d_file))
     mergedSkeleton.skeleton_level_summary()
 
@@ -793,11 +798,14 @@ def skeleton_summary(corrpMap):
     mergedSkeleton.threshold = 0.01
 
     # Save mean and std maps
-    # img = nb.load(str(corrpMap.merged_4d_file))
+    img = nb.load(str(corrpMap.merged_4d_file))
     # nb.Nifti1Image(mergedSkeleton.merged_skeleton_mean_map,
                    # affine=img.affine).to_filename('skeleton_mean.nii.gz')
     # nb.Nifti1Image(mergedSkeleton.merged_skeleton_mean_map,
                    # affine=img.affine).to_filename('skeleton_std.nii.gz')
+    nb.Nifti1Image(
+        mergedSkeleton.skeleton_alteration_map,
+        affine=img.affine).to_filename('skeleton_enigma_diff_map.nii.gz')
 
     # plot average map through `get_figure_enigma` function
     mergedSkeleton.corrp_data = mergedSkeleton.merged_skeleton_mean_map
@@ -826,6 +834,46 @@ def skeleton_summary(corrpMap):
         y=0.95,
         fontsize=20)
     out_image_loc = re.sub('.nii.gz', '_std.png',
+                           str(corrpMap.merged_4d_file))
+    print(out_image_loc)
+    mergedSkeleton.fig.savefig(out_image_loc, dpi=200)
+
+    # plot binnarized sum map through `get_figure_enigma` function
+    mergedSkeleton.corrp_data = mergedSkeleton.merged_skeleton_data_bin_sum
+    mergedSkeleton.main_data_vmax = 'free'
+    CorrpMap.get_figure_enigma(mergedSkeleton)
+    # dark figure background
+    plt.style.use('dark_background')
+    # title
+    mergedSkeleton.fig.suptitle(
+        f'Sum of binarized skeleton maps\n{corrpMap.merged_4d_file}',
+        y=0.95,
+        fontsize=20)
+    out_image_loc = re.sub('.nii.gz', '_bin_sum.png',
+                           str(corrpMap.merged_4d_file))
+    print(out_image_loc)
+    mergedSkeleton.fig.savefig(out_image_loc, dpi=200)
+
+    # plot diff map between the binary sum map vs ENIGMA template
+    # through `get_figure_enigma` function
+
+    # enlarge the alteration map
+    mergedSkeleton.skeleton_alteration_map = ndimage.binary_dilation(
+            mergedSkeleton.skeleton_alteration_map,
+            iterations=7).astype(mergedSkeleton.skeleton_alteration_map.dtype)
+
+    mergedSkeleton.corrp_data = mergedSkeleton.skeleton_alteration_map
+    mergedSkeleton.main_data_vmax = 'free'
+    CorrpMap.get_figure_enigma(mergedSkeleton)
+    # dark figure background
+    plt.style.use('dark_background')
+    # title
+    mergedSkeleton.fig.suptitle(
+        f'Difference betwenn the sum of binarized skeleton maps\n'
+        f'and ENIGMA template\n{corrpMap.merged_4d_file}',
+        y=0.95,
+        fontsize=20)
+    out_image_loc = re.sub('.nii.gz', '_bin_sum_diff_to_enigma.png',
                            str(corrpMap.merged_4d_file))
     print(out_image_loc)
     mergedSkeleton.fig.savefig(out_image_loc, dpi=200)

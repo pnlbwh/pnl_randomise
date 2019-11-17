@@ -28,6 +28,20 @@ class MergedSkeleton:
         self.merged_skeleton_img = nb.load(str(self.merged_skeleton_loc))
         self.merged_skeleton_data = self.merged_skeleton_img.get_data()
 
+        # ENIGMA
+        self.enigma_dir = Path('/data/pnl/soft/pnlpipe3/tbss/data/enigmaDTI')
+        self.enigma_fa_loc = self.enigma_dir / 'ENIGMA_DTI_FA.nii.gz'
+        self.enigma_skeleton_mask_loc = self.enigma_dir / \
+            'ENIGMA_DTI_FA_skeleton_mask.nii.gz'
+
+        # binarize merged skeleton map
+        self.merged_skeleton_data_bin = np.where(
+            self.merged_skeleton_data == 0, 0, 1)
+        self.merged_skeleton_data_bin_sum = np.sum(
+            self.merged_skeleton_data_bin, axis=3)
+        self.merged_skeleton_data_bin_mean = np.mean(
+            self.merged_skeleton_data_bin, axis=3)
+
     def skeleton_level_summary(self):
         """Summarize all skeleton
 
@@ -52,6 +66,26 @@ class MergedSkeleton:
                 np.nonzero(self.merged_skeleton_mean_map)].mean()
         self.merged_skeleton_std = self.merged_skeleton_std_map[
                 np.nonzero(self.merged_skeleton_std_map)].mean()
+
+        # get difference of the binarized map to the target skeleton
+        # not working here**
+        target_data = nb.load(str(self.enigma_skeleton_mask_loc)).get_data()
+        mask = target_data == 1
+
+        # below line does not work, as if you binarize the sum like this
+        # there will be whole skeleton
+        self.skeleton_alteration_map = np.where(
+            (self.merged_skeleton_data_bin_mean != 0) &
+            (self.merged_skeleton_data_bin_mean != 1),
+            1, 0)
+
+        # bin_sum_binarized = np.where(
+            # self.merged_skeleton_data_bin_sum != 0, 1, 0)
+        # diff_map = bin_sum_binarized - target_data
+        # print(diff_map[mask].std())
+        # rms_diff = np.sqrt(diff_map ** 2)
+        # self.binary_diff_map = rms_diff
+        # print(self.binary_diff_map[mask].mean())
 
     def subject_level_summary(self):
         """Summarize subject skeletons
@@ -151,4 +185,3 @@ class SkeletonDir:
             self.g.ax.text(1, height, text, 
                       transform=self.g.ax.transAxes)
             height -= 0.3
-
