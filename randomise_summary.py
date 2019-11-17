@@ -783,6 +783,11 @@ if __name__ == '__main__':
                            action='store_true',
                            help='Create figures with tbss_fill outputs')
 
+    argparser.add_argument("--skeleton_summary", "-ss",
+                           action='store_true',
+                           help='Create summary from all skeleton and also '
+                                'figures from merged_skeleton_images')
+
     args = argparser.parse_args()
 
     # if separate corrp image is given
