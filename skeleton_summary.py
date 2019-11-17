@@ -69,7 +69,7 @@ class MergedSkeleton:
             non_zero_mean = vol_data[np.nonzero(vol_data)].mean()
             non_zero_std = vol_data[np.nonzero(vol_data)].std()
             self.subject_nonzero_means.append(non_zero_mean)
-            self.subject_nonzero_std.append(non_zero_std)
+            self.subject_nonzero_stds.append(non_zero_std)
 
 
 class SkeletonDir:
