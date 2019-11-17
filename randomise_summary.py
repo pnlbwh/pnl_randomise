@@ -690,9 +690,16 @@ class CorrpMap(RandomiseRun):
 
         # if corrpMap.corrp_data_filled exist
         if hasattr(self, 'corrp_data_filled'):
-            data = np.where(self.corrp_data_filled != 0,
-                            self.corrp_data_filled,
-                            np.nan)
+            data = np.where(self.corrp_data_filled == 0,
+                            np.nan,
+                            self.corrp_data_filled)
+
+        elif hasattr(self, 'main_data_vmax'):
+            # for skeleton std data plot
+            data = np.where(self.corrp_data == 0,
+                            np.nan,
+                            self.corrp_data)
+
         else:
             # Make voxels with their intensities lower than data_vmin
             # transparent
@@ -710,7 +717,7 @@ class CorrpMap(RandomiseRun):
                                  nrows=self.nrows,
                                  figsize=(size_w * self.ncols,
                                           size_h * self.nrows),
-                                 dpi=150)
+                                 dpi=200)
 
         # For each axis
         for num, ax in enumerate(np.ravel(axes)):
@@ -722,6 +729,7 @@ class CorrpMap(RandomiseRun):
             # background skeleton
             img = ax.imshow(
                 np.flipud(self.enigma_skeleton_data[:, :, slice_nums[num]].T),
+                interpolation=None,
                 cmap='ocean')
 
             # main data
@@ -729,17 +737,20 @@ class CorrpMap(RandomiseRun):
                 # tbss_fill FA maps
                 img = ax.imshow(np.flipud(data[:, :, slice_nums[num]].T),
                                 cmap='autumn',
+                                interpolation=None,
                                 vmin=0,
                                 vmax=1)
             elif hasattr(self, 'main_data_vmax'):
                 # for skeleton std data plot
                 if self.main_data_vmax == 'free':
                     img = ax.imshow(np.flipud(data[:, :, slice_nums[num]].T),
+                                    interpolation=None,
                                     cmap='cool',
                                     vmin=0)
             else:
                 # stat maps
                 img = ax.imshow(np.flipud(data[:, :, slice_nums[num]].T),
+                                interpolation=None,
                                 cmap='autumn',
                                 vmin=self.threshold,
                                 vmax=1)
@@ -781,6 +792,13 @@ def skeleton_summary(corrpMap):
     mergedSkeleton.data_shape = corrpMap.data_shape
     mergedSkeleton.threshold = 0.01
 
+    # Save mean and std maps
+    # img = nb.load(str(corrpMap.merged_4d_file))
+    # nb.Nifti1Image(mergedSkeleton.merged_skeleton_mean_map,
+                   # affine=img.affine).to_filename('skeleton_mean.nii.gz')
+    # nb.Nifti1Image(mergedSkeleton.merged_skeleton_mean_map,
+                   # affine=img.affine).to_filename('skeleton_std.nii.gz')
+
     # plot average map through `get_figure_enigma` function
     mergedSkeleton.corrp_data = mergedSkeleton.merged_skeleton_mean_map
     CorrpMap.get_figure_enigma(mergedSkeleton)
@@ -788,13 +806,13 @@ def skeleton_summary(corrpMap):
     plt.style.use('dark_background')
     # title
     mergedSkeleton.fig.suptitle(
-        f'{corrpMap.merged_4d_file} average map',
+        f'All skeleton average map\n{corrpMap.merged_4d_file}',
         y=0.95,
         fontsize=20)
     out_image_loc = re.sub('.nii.gz', '_average.png',
                            str(corrpMap.merged_4d_file))
     print(out_image_loc)
-    mergedSkeleton.fig.savefig(out_image_loc, dpi=100)
+    mergedSkeleton.fig.savefig(out_image_loc, dpi=200)
 
     # plot std map through `get_figure_enigma` function
     mergedSkeleton.corrp_data = mergedSkeleton.merged_skeleton_std_map
@@ -804,13 +822,14 @@ def skeleton_summary(corrpMap):
     plt.style.use('dark_background')
     # title
     mergedSkeleton.fig.suptitle(
-        f'{corrpMap.merged_4d_file} standard deviation map',
+        f'All skeleton standard deviation map\n{corrpMap.merged_4d_file}',
         y=0.95,
         fontsize=20)
     out_image_loc = re.sub('.nii.gz', '_std.png',
                            str(corrpMap.merged_4d_file))
     print(out_image_loc)
-    mergedSkeleton.fig.savefig(out_image_loc, dpi=100)
+    mergedSkeleton.fig.savefig(out_image_loc, dpi=200)
+
 
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser(
@@ -1061,7 +1080,7 @@ if __name__ == '__main__':
                 out_image_loc = re.sub('.nii.gz', '.png',
                                        str(corrpMap.location))
                 print(out_image_loc)
-                corrpMap.fig.savefig(out_image_loc, dpi=100)
+                corrpMap.fig.savefig(out_image_loc, dpi=200)
                 #corrpMap.fig.savefig('/PHShome/kc244/out_image_loc.png', dpi=100)
 
     # skeleton summary parts
