@@ -731,6 +731,12 @@ class CorrpMap(RandomiseRun):
                                 cmap='autumn',
                                 vmin=0,
                                 vmax=1)
+            elif hasattr(self, 'main_data_vmax'):
+                # for skeleton std data plot
+                if self.main_data_vmax == 'free':
+                    img = ax.imshow(np.flipud(data[:, :, slice_nums[num]].T),
+                                    cmap='cool',
+                                    vmin=0)
             else:
                 # stat maps
                 img = ax.imshow(np.flipud(data[:, :, slice_nums[num]].T),
@@ -766,31 +772,45 @@ class CorrpMap(RandomiseRun):
 
 
 def skeleton_summary(corrpMap):
+    """Make summary from corrpMap, using its merged_skeleton"""
     mergedSkeleton = MergedSkeleton(str(corrpMap.merged_4d_file))
-    mergedSkeleton.skeleton_summary()
+    mergedSkeleton.skeleton_level_summary()
 
     mergedSkeleton.enigma_fa_loc = corrpMap.enigma_fa_loc
     mergedSkeleton.enigma_skeleton_mask_loc = corrpMap.enigma_skeleton_mask_loc
     mergedSkeleton.data_shape = corrpMap.data_shape
-    mergedSkeleton.threshold = 0
+    mergedSkeleton.threshold = 0.01
 
     # plot average map through `get_figure_enigma` function
     mergedSkeleton.corrp_data = mergedSkeleton.merged_skeleton_mean_map
     CorrpMap.get_figure_enigma(mergedSkeleton)
-
     # dark figure background
     plt.style.use('dark_background')
-
+    # title
     mergedSkeleton.fig.suptitle(
         f'{corrpMap.merged_4d_file} average map',
         y=0.95,
         fontsize=20)
-
-    out_image_loc = re.sub('.nii.gz', '.png',
+    out_image_loc = re.sub('.nii.gz', '_average.png',
                            str(corrpMap.merged_4d_file))
     print(out_image_loc)
-    corrpMap.fig.savefig(out_image_loc, dpi=100)
+    mergedSkeleton.fig.savefig(out_image_loc, dpi=100)
 
+    # plot std map through `get_figure_enigma` function
+    mergedSkeleton.corrp_data = mergedSkeleton.merged_skeleton_std_map
+    mergedSkeleton.main_data_vmax = 'free'
+    CorrpMap.get_figure_enigma(mergedSkeleton)
+    # dark figure background
+    plt.style.use('dark_background')
+    # title
+    mergedSkeleton.fig.suptitle(
+        f'{corrpMap.merged_4d_file} standard deviation map',
+        y=0.95,
+        fontsize=20)
+    out_image_loc = re.sub('.nii.gz', '_std.png',
+                           str(corrpMap.merged_4d_file))
+    print(out_image_loc)
+    mergedSkeleton.fig.savefig(out_image_loc, dpi=100)
 
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser(
@@ -1049,4 +1069,6 @@ if __name__ == '__main__':
         for corrpMap in corrp_map_classes:
             if corrpMap.significant is True:
                 if hasattr(corrpMap, 'merged_4d_file'):
+                    print_head("Summarizing merged 4d file:"
+                               f"{corrpMap.merged_4d_file}")
                     skeleton_summary(corrpMap)
