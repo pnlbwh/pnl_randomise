@@ -20,6 +20,9 @@ import sys
 
 # utils
 from fsl_randomise_utils import print_df, print_head
+from skeleton_summary import MergedSkeleton
+from itertools import product
+import inquirer
 
 mpl.use('Agg')
 pd.set_option('mode.chained_assignment', None)
@@ -298,6 +301,9 @@ class CorrpMap(RandomiseRun):
                 self.location.name).group(1)
         except:
             self.modality = ''
+
+        # find all merged file
+        self.get_merged_skeleton_file()
         self.threshold = threshold
         self.test_kind = re.search(r'(\w)stat\d+.nii.gz', self.name).group(1)
         self.stat_num = re.search(r'(\d+).nii.gz', self.name).group(1)
@@ -321,6 +327,53 @@ class CorrpMap(RandomiseRun):
             self.get_significant_info()
             self.get_significant_overlap_with_HO()
         self.make_df()
+
+    def get_merged_skeleton_file(self):
+        """Search for the matching merged skeleton files
+
+        Searches for the merged skeleton files based on the detected modality.
+        """
+        # list of directories and serach patterns
+        list_search_directories = [
+                self.location.parent,
+                self.location.parent.parent
+            ]
+        list_of_patters = [
+            f'*all*_{self.modality}[_.]*nii.gz',
+            f'*{self.modality}*merged*.nii.gz'
+            ]
+        # get combinations of the two lists
+        list_of_dir_pat = list(product(
+            list_search_directories,
+            list_of_patters))
+
+        # search files
+        matching_files = []
+        for s_dir, pat in list_of_dir_pat:
+            try:
+                mf = list(Path(s_dir).glob(pat))
+                matching_files += mf
+            except:
+                pass
+
+        matching_files = list(set(matching_files))
+        # check matching_files list
+        if len(matching_files) == 1:
+            self.merged_4d_file = matching_files[0]
+        elif len(matching_files) > 1:
+            questions = [
+                inquirer.List(
+                    'merged_file',
+                    message="There are more than one matching merged 4d "
+                            f"skeleton for {self.location.name}. "
+                            "Which is the correct merged file?",
+                    choices=matching_files,
+                    )
+                ]
+            answer = inquirer.prompt(questions)
+            self.merged_4d_file = answer['merged_file']
+        else:
+            self.merged_4d_file = 'missing'
 
     def check_significance(self):
         """Check whether there is any significant voxel"""
@@ -712,6 +765,33 @@ class CorrpMap(RandomiseRun):
         os.popen(command).read()
 
 
+def skeleton_summary(corrpMap):
+    mergedSkeleton = MergedSkeleton(str(corrpMap.merged_4d_file))
+    mergedSkeleton.skeleton_summary()
+
+    mergedSkeleton.enigma_fa_loc = corrpMap.enigma_fa_loc
+    mergedSkeleton.enigma_skeleton_mask_loc = corrpMap.enigma_skeleton_mask_loc
+    mergedSkeleton.data_shape = corrpMap.data_shape
+    mergedSkeleton.threshold = 0
+
+    # plot average map through `get_figure_enigma` function
+    mergedSkeleton.corrp_data = mergedSkeleton.merged_skeleton_mean_map
+    CorrpMap.get_figure_enigma(mergedSkeleton)
+
+    # dark figure background
+    plt.style.use('dark_background')
+
+    mergedSkeleton.fig.suptitle(
+        f'{corrpMap.merged_4d_file} average map',
+        y=0.95,
+        fontsize=20)
+
+    out_image_loc = re.sub('.nii.gz', '.png',
+                           str(corrpMap.merged_4d_file))
+    print(out_image_loc)
+    corrpMap.fig.savefig(out_image_loc, dpi=100)
+
+
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -963,3 +1043,10 @@ if __name__ == '__main__':
                 print(out_image_loc)
                 corrpMap.fig.savefig(out_image_loc, dpi=100)
                 #corrpMap.fig.savefig('/PHShome/kc244/out_image_loc.png', dpi=100)
+
+    # skeleton summary parts
+    if args.skeleton_summary:
+        for corrpMap in corrp_map_classes:
+            if corrpMap.significant is True:
+                if hasattr(corrpMap, 'merged_4d_file'):
+                    skeleton_summary(corrpMap)
