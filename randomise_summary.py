@@ -786,8 +786,7 @@ def skeleton_summary(corrpMap):
     """Make summary from corrpMap, using its merged_skeleton
 
     TODO:
-        - difference of each binarized skeleton volume vs ENIGMA skeleton
-        - show differences
+        - make it run only once for each merged skeleton file
     """
     mergedSkeleton = MergedSkeleton(str(corrpMap.merged_4d_file))
     mergedSkeleton.skeleton_level_summary()
