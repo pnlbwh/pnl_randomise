@@ -494,10 +494,10 @@ class CorrpMap(RandomiseRun):
         '''Update CorrpMap class when there the contrast file is available
         (when self.contrast_array is available)
 
-        Keyword argument
-        contrast_array : numpy array, of the design contrast file. Created
-                         by loading only the contrast lines text using
-                         np.loadtxt.
+        Requires:
+            self.contrast_array : numpy array, of the design contrast file.
+                                  Created by loading only the contrast lines
+                                  text using np.loadtxt.
         '''
         # Contrast map
         line_num = int(self.stat_num)-1
@@ -505,6 +505,7 @@ class CorrpMap(RandomiseRun):
         self.contrast_line = self.contrast_array[line_num, :]
         self.contrast_text = self.contrast_lines[line_num]
 
+        # Change the numpy array to string
         self.df['contrast'] = np.array2string(self.contrast_line,
                                               precision=2)[1:-1]
         try:
@@ -514,14 +515,14 @@ class CorrpMap(RandomiseRun):
 
         # if f-test
         if self.test_kind == 'f':
-            try:
-                with open(str(self.location.parent / 'design.fts'), 'r') as f:
-                    lines = f.readlines()
-                    design_fts_line = [x for x in lines
-                                       if re.search(r'^\d', x)][0]
-                self.df['contrast'] = '* ' + design_fts_line
-            except:
-                self.df['contrast'] = 'f-test'
+            self.df['contrast'] = 'f-test'
+            # try:
+                # with open(str(self.location.parent / 'design.fts'), 'r') as f:
+                    # lines = f.readlines()
+                    # design_fts_line = [x for x in lines
+                                       # if re.search(r'^\d', x)][0]
+                # self.df['contrast'] = '* ' + design_fts_line
+            # except:
 
         # Reorder self.df to have file name and the contrast on the left
         self.df = self.df[['file name', 'contrast', 'contrast_text'] +
@@ -530,11 +531,6 @@ class CorrpMap(RandomiseRun):
                                'contrast',
                                'contrast_text']]]
         return self.df
-
-    def get_significant_cluster(self):
-        """Get binary array of significant cluster"""
-        self.significant_cluster_data = np.where(
-            self.corrp_data >= self.threshold, 1, 0)
 
     def update_with_4d_data(self):
         """get mean values for skeleton files in the significant voxels
