@@ -20,7 +20,7 @@ import sys
 
 # utils
 from kchopy.kcho_utils import print_df, print_head, search_and_select_one
-from skeleton_summary import MergedSkeleton
+from skeleton_summary import MergedSkeleton, SkeletonDir
 from itertools import product
 import inquirer
 
@@ -777,6 +777,29 @@ def skeleton_summary(corrpMap):
     """
     mergedSkeleton = MergedSkeleton(str(corrpMap.merged_4d_file))
     mergedSkeleton.skeleton_level_summary()
+    mergedSkeleton.subject_level_summary()
+    mergedSkeleton.modality = corrpMap.modality
+
+    # corrpMap.get_matrix_info()
+    group_list = corrpMap.matrix_df[corrpMap.group_cols].astype(
+        'int').to_string(header=False, index=False).split('\n')
+            # lambda row: f'{[x for x in l}', axis=1).tolist()
+
+    # group list
+    mergedSkeleton.df = pd.DataFrame({
+        'subject': corrpMap.matrix_df.index,
+        'mean': mergedSkeleton.subject_nonzero_means,
+        'skeleton non_zero_std': mergedSkeleton.subject_nonzero_stds,
+        'group': group_list
+        })
+
+    # Whole skeleton average for each subjects for each group
+    SkeletonDir.get_group_figure(mergedSkeleton)
+    out_image_loc = re.sub('.nii.gz',
+                           '_skeleton_average_for_all_subjects.png',
+                           str(corrpMap.merged_4d_file))
+    print(out_image_loc)
+    mergedSkeleton.g.savefig(out_image_loc, dpi=200)
 
     mergedSkeleton.enigma_fa_loc = corrpMap.enigma_fa_loc
     mergedSkeleton.enigma_skeleton_mask_loc = corrpMap.enigma_skeleton_mask_loc
@@ -996,6 +1019,9 @@ if __name__ == '__main__':
         # TODO : WHY DOES NOT MAP WORK in updating 'df' attribute within a class
         #map(lambda x: setattr(x, df, x.update_with_contrast()), corrp_map_classes)
         for corrpMap in corrp_map_classes:
+            corrpMap.matrix_file = randomiseRun.matrix_file
+            corrpMap.matrix_df = randomiseRun.matrix_df
+            corrpMap.group_cols = randomiseRun.group_cols
             corrpMap.contrast_array = randomiseRun.contrast_array
             corrpMap.contrast_lines = randomiseRun.contrast_lines
             corrpMap.update_with_contrast()

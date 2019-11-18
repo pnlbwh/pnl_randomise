@@ -19,6 +19,8 @@ import seaborn as sns
 from itertools import combinations
 import scipy.stats as ss
 
+from kchopy.kcho_utils import print_head
+from kchostats.ancova import anova, ttest
 
 class MergedSkeleton:
     """TBSS all_modality_skeleton map object"""
@@ -26,6 +28,7 @@ class MergedSkeleton:
         """Read in merged skeleton nifti file"""
         self.merged_skeleton_loc = merged_skeleton_loc
         self.merged_skeleton_img = nb.load(str(self.merged_skeleton_loc))
+        print_head(f"Reading {merged_skeleton_loc}")
         self.merged_skeleton_data = self.merged_skeleton_img.get_data()
 
         # ENIGMA
@@ -67,16 +70,15 @@ class MergedSkeleton:
         self.merged_skeleton_std = self.merged_skeleton_std_map[
                 np.nonzero(self.merged_skeleton_std_map)].mean()
 
-        # get difference of the binarized map to the target skeleton
-        # not working here**
-        target_data = nb.load(str(self.enigma_skeleton_mask_loc)).get_data()
-
         # assign 1 for voxels where all subject have skeleton
         # assign 0 for voxels where only some subjects have skeleton
         self.skeleton_alteration_map = np.where(
             (self.merged_skeleton_data_bin_mean != 0) &
             (self.merged_skeleton_data_bin_mean != 1),
             1, 0)
+
+        # TODO: diff map between ENIGMA skeleton mask
+        target_data = nb.load(str(self.enigma_skeleton_mask_loc)).get_data()
 
     def subject_level_summary(self):
         """Summarize subject skeletons
@@ -113,28 +115,28 @@ class SkeletonDir:
         # list of all skeleton nifti files in numpy arrays
         arrays = [nb.load(str(x)).get_data() for x in self.skeleton_files]
 
+        # merge skeleton files
+        self.merged_skeleton_data = np.stack(arrays, axis=3)
+
         self.means = [x[np.nonzero(x)].mean() for x in arrays]
         self.df['mean'] = self.means
         self.stds = [x[np.nonzero(x)].std() for x in arrays]
         self.df['std'] = self.stds
 
-        # merge skeleton files
-        self.merged_data = np.stack(arrays, axis=3)
-
-        self.mean = self.merged_data[np.nonzero(self.merged_data)].mean()
-        self.std = self.merged_data[np.nonzero(self.merged_data)].std()
+        self.mean = self.merged_skeleton_data[
+            np.nonzero(self.merged_skeleton_data)].mean()
+        self.std = self.merged_skeleton_data[
+            np.nonzero(self.merged_skeleton_data)].std()
 
         self.merged_data_df = pd.DataFrame({
-            'merged mean':[self.mean],
-            'merged std':[self.std]
+            'merged mean': [self.mean],
+            'merged std': [self.std]
         })
-
 
     def merge_demo_df(self, demo_df, merge_on='subject'):
         self.df['subject'] = self.df['files'].apply(
             lambda x: x.name).str.split('_').str[0]
         self.df = pd.merge(self.df, demo_df, on=merge_on, how='left')
-
 
     def get_group_figure(self):
         self.g = sns.catplot(x='group', y='mean', hue='group', data=self.df)
@@ -142,37 +144,66 @@ class SkeletonDir:
         self.g.fig.set_dpi(150)
         self.g.ax.set_ylabel(f'{self.modality}')
         self.g.ax.set_xlabel('Group')
-        self.g.ax.set_title(f'Average {self.modality} in ANTS-TBSS skeletons',
-                       fontweight='bold')
+        self.g.ax.set_title(
+            f'Average {self.modality} in skeleton for all subjects',
+            fontweight='bold')
 
         # tick labels to have number of groups
-        get_ticklabels = lambda tmp_df, x: \
-                f'{x} ({len(tmp_df[tmp_df.group==x])})'
-        self.g.ax.set_xticklabels([get_ticklabels(self.df, x) for x in \
-                             self.df.group.unique()])
+        def get_ticklabels(tmp_df, group):
+            row_count_for_group = len(tmp_df[tmp_df.group == group])
+            return f'{group} ({row_count_for_group})'
+
+        self.g.ax.set_xticklabels([get_ticklabels(self.df, x) for x in
+                                   self.df.group.unique()])
 
         # average line
-        line_width=0.3
+        line_width = 0.3
         for num, (group, table) in enumerate(self.df.groupby('group')):
             average = table['mean'].mean()
-            self.g.ax.plot([num-line_width, num+line_width], 
+            self.g.ax.plot([num-line_width, num+line_width],
                            [average, average])
-            
+
         # Add stat information to the graph
-        height=0.8
+        height = 0.9
         two_groups_perm = list(combinations(self.df.group.unique(), 2))
+
+        # if two groups
+        if len(self.df.group.unique()) == 2:
+            height_step = 0.8 / len(two_groups_perm)
+        else:
+            height_step = 0.8 / (len(two_groups_perm) + 1)
+
+        print(height_step)
+        # two group comparisons
+        # TODO: add ANCOVA
         for g1, g2 in two_groups_perm:
             gb = self.df.groupby('group')
             g1_means = gb.get_group(g1)['mean']
             g2_means = gb.get_group(g2)['mean']
-            
-            t,p = ss.ttest_ind(g1_means, g2_means)
-            
-            if p < 0.05:
-                text = f'{g1} vs {g2}\nP ({t:.2f}) = {p:.2f}*'
-            else:
-                text = f'{g1} vs {g2}\nP ({t:.2f}) = {p:.2f}'
 
-            self.g.ax.text(1, height, text, 
-                      transform=self.g.ax.transAxes)
-            height -= 0.3
+            # t, p = ss.ttest_ind(g1_means, g2_means)
+            t, p, dof = ttest(g1_means, g2_means)
+
+            if p < 0.05:
+                text = f'{g1} vs {g2}\nT ({int(dof)}) = {t:.2f}, P = {p:.2f}*'
+            else:
+                text = f'{g1} vs {g2}\nT ({int(dof)}) = {t:.2f}, P = {p:.2f}'
+
+            self.g.ax.text(1, height, text,
+                           transform=self.g.ax.transAxes)
+            height -= height_step
+
+        # ANCOVA if there are more than two groups
+        if len(self.df.group.unique()) > 2:
+            anova_df = anova(self.df, 'mean ~ group')
+            f_val = anova_df.loc['group', 'F']
+            dof = anova_df.loc['group', 'df']
+            p = anova_df.loc['group', 'PR(>F)']
+            if p < 0.05:
+                text = f'ANOVA\nF ({int(dof)}) = '\
+                       f'{f_val:.2f}, P = {p:.2f}*'
+            else:
+                text = f'ANOVA\nF ({int(dof)}) = '\
+                       f'{f_val:.2f}, P = {p:.2f}'
+            self.g.ax.text(1, height, text,
+                           transform=self.g.ax.transAxes)
