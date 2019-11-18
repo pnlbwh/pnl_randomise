@@ -344,6 +344,7 @@ class CorrpMap(RandomiseRun):
         # enigma settings
         self.enigma_dir = Path('/data/pnl/soft/pnlpipe3/tbss/data/enigmaDTI')
         self.enigma_fa_loc = self.enigma_dir / 'ENIGMA_DTI_FA.nii.gz'
+        self.enigma_table = self.enigma_dir / 'ENIGMA_look_up_table.txt'
         self.enigma_skeleton_mask_loc = self.enigma_dir / \
             'ENIGMA_DTI_FA_skeleton_mask.nii.gz'
 
@@ -533,7 +534,7 @@ class CorrpMap(RandomiseRun):
         return self.df
 
     def update_with_4d_data(self):
-        """get mean values for skeleton files in the significant voxels
+        """Get mean values for skeleton files in the significant voxels
 
         Args:
             skeleton_files: list of Path objects, skeleton file locations.
@@ -547,28 +548,30 @@ class CorrpMap(RandomiseRun):
             - think about using all_modality_merged images?
         """
         merged_4d_data = nb.load(str(self.merged_4d_file)).get_data()
+
+        # get a map with significant voxels
         significant_cluster_data = np.where(
             self.corrp_data >= self.threshold, 1, 0)
 
         self.cluster_averages = {}
+        # Get average of values in the `significant_cluster_data` map
+        # for each skeleton volume
         for vol_num in np.arange(merged_4d_data.shape[3]):
-            average = merged_4d_data[:,:,:,vol_num]\
-                    [significant_cluster_data == 1].mean()
-
+            vol_data = merged_4d_data[:, :, :, vol_num]
+            average = vol_data[significant_cluster_data == 1].mean()
             self.cluster_averages[vol_num] = average
 
         self.cluster_averages_df = pd.DataFrame.from_dict(
             self.cluster_averages,
-            orient='index', 
-            columns=[f'{self.modality} values in the significant '\
+            orient='index',
+            columns=[f'{self.modality} values in the significant '
                      f'cluster {self.name}']
         )
-        
 
     def get_atlas_query(self):
         """Return pandas dataframe summary of atlas_query outputs"""
         # threshold corrp file according to the threshold
-        thresholded_map =  tempfile.NamedTemporaryFile(suffix='tmp.nii.gz')
+        thresholded_map = tempfile.NamedTemporaryFile(suffix='tmp.nii.gz')
         command = f'fslmaths {self.location} \
                 -thr {self.threshold} -bin \
                 {thresholded_map.name}'
