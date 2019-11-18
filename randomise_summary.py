@@ -591,12 +591,12 @@ class CorrpMap(RandomiseRun):
         text_tract = os.popen(command).read()
 
         # Make pandas dataframe
-        df_query_label = pd.read_csv(pd.compat.StringIO(text_label), 
-                                     sep=':', 
+        df_query_label = pd.read_csv(pd.compat.StringIO(text_label),
+                                     sep=':',
                                      names=['Structure', 'Percentage'])
         df_query_label['atlas'] = 'Labels'
-        df_query_tract = pd.read_csv(pd.compat.StringIO(text_tract), 
-                                     sep=':', 
+        df_query_tract = pd.read_csv(pd.compat.StringIO(text_tract),
+                                     sep=':',
                                      names=['Structure', 'Percentage'])
         df_query_tract['atlas'] = 'Tracts'
         df_query = pd.concat([df_query_label, df_query_tract])
@@ -605,12 +605,12 @@ class CorrpMap(RandomiseRun):
         df_query = df_query[['file_name', 'Structure', 'Percentage', 'atlas']]
 
         df_query = df_query.sort_values(
-            ['file_name', 'atlas', 'Percentage'], 
+            ['file_name', 'atlas', 'Percentage'],
             ascending=False)
-    
+
         # Remove texts bound by parentheses
         df_query['Structure'] = df_query['Structure'].apply(
-            lambda x: re.sub('\(.*\)', '', x))
+            lambda x: re.sub(r'\(.*\)', '', x))
 
         # Adding 'Side' column
         df_query['Side'] = df_query['Structure'].str.extract('(L|R)$')
@@ -620,17 +620,16 @@ class CorrpMap(RandomiseRun):
             '(L|R)$', '').str.strip()
         df_query.loc[df_query['Side'].isnull(), 'Side'] = 'M'
 
-        # Side column to wide format - 
+        # Side column to wide format
         self.df_query = pd.pivot_table(
             index=['file_name', 'Structure', 'atlas'],
             columns='Side',
-            values='Percentage', 
+            values='Percentage',
             data=df_query).reset_index()
 
         # TODO: change here later
         # self.df_query = self.df_query.groupby('atlas').get_group('Labels')
         self.df_query = self.df_query.sort_values('atlas')
-
 
     def get_figure_enigma(self, **kwargs):
         """Fig and axes attribute to CorrpMap"""
