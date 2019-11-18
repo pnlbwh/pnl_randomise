@@ -19,7 +19,7 @@ import os
 import sys
 
 # utils
-from fsl_randomise_utils import print_df, print_head
+from kchopy.kcho_utils import print_df, print_head
 from skeleton_summary import MergedSkeleton
 from itertools import product
 import inquirer
