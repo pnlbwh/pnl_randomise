@@ -9,7 +9,7 @@ import pandas as pd
 from pathlib import Path
 
 # import print option
-from fsl_randomise_utils import print_df
+from kchopy.kcho_utils import print_df
 
 # figure
 import seaborn as sns

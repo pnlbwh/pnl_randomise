@@ -307,15 +307,19 @@ class CorrpMap(RandomiseRun):
         self.name = self.location.name
         self.threshold = threshold
 
-        # if modality is included in its name
+        # Modality
+        # modality must be included in its name
         try:
             self.modality = re.search(
                 r'.*(FW|FA|MD|RD|AD|MD|FAt|'
                 r'FAc|FAk|MK|MKc|MKk|MDt|RDt|ADt|MDt)_',
                 self.location.name).group(1)
-        except:
-            self.modality = ''
+        except AttributeError:
+            print_head(f'No modality is detected in the file: {self.name}\n'
+                       'Please add modality in the file name')
+            self.modality = 'unknown'
 
+        # Merged skeleton file
         # find merged skeleton file
         merged_skel_pattern = [f'*all*_{self.modality}[_.]*nii.gz',
                                f'*{self.modality}*merged*.nii.gz']
@@ -323,6 +327,7 @@ class CorrpMap(RandomiseRun):
             'merged_skeleton',
             self.location.parent,
             merged_skel_pattern)
+        print(self.merged_4d_file)
 
         # information from the file name
         self.test_kind = re.search(r'(\w)stat\d+.nii.gz', self.name).group(1)
