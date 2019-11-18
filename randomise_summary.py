@@ -325,7 +325,7 @@ class CorrpMap(RandomiseRun):
                                f'*{self.modality}*merged*.nii.gz']
         self.merged_4d_file = search_and_select_one(
             'merged_skeleton',
-l           self.location.parent,
+            self.location.parent,
             merged_skel_pattern)
 
         # information from the file name
@@ -1016,27 +1016,23 @@ if __name__ == '__main__':
                     [values_df, corrpMap.cluster_averages_df], axis=1)
 
         # if any of corrp map had significant voxels
+        out_csv_name = 'values_extracted_for_all_subjects.csv'
+        out_csv = f'{randomiseRun.location}/{out_csv_name}'
         try:
             values_df = pd.concat([values_df,
                                    randomiseRun.matrix_df],
                                   axis=1)
-            values_df.to_csv(
-                f'{randomiseRun.location}/values_extracted_for_all_subjects.csv'
-            )
-            print(f'{randomiseRun.location}/'
-                  'values_extracted_for_all_subjects.csv is created.')
+            values_df.to_csv(out_csv)
+            print(f'{out_csv} is created.')
         # if none of corrp map had significant voxels
         except:
-            values_df.to_csv(
-                f'{randomiseRun.location}/values_extracted_for_all_subjects.csv'
-            )
-            print(f'{randomiseRun.location}/'
-                  'values_extracted_for_all_subjects.csv is created.')
+            values_df.to_csv(out_csv)
+            print(f'{out_csv} is created.')
 
         values_df.index = [f'subject {x+1}' for x in values_df.index]
         print_df(values_df)
 
-    # printing result summaryt
+    # printing result summary
     df = pd.concat([x.df for x in corrp_map_classes], sort=False)
     df = df.sort_values('file name')
     print_head('Result summary')
