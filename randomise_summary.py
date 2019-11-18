@@ -19,7 +19,7 @@ import os
 import sys
 
 # utils
-from kchopy.kcho_utils import print_df, print_head
+from kchopy.kcho_utils import print_df, print_head, search_and_select_one
 from skeleton_summary import MergedSkeleton
 from itertools import product
 import inquirer
@@ -32,34 +32,39 @@ TODO:
     - `-i` and without `-i` to use similar flow.
     - Test
     - Save summary outputs in pdf, csv or excel?
-    - TODO add interaction information (group info to the get_contrast_info_english)
-    - Check whether StringIO.io is used
-    - Estimate how much voxels overlap with different atlases with varying 
-      thresholds.
+    - TODO add "interaction" information
     - Move useful functions to kcho_utils.
     - Parallelize
+    - design mat and design con search function
 '''
 
 
 class RandomiseRun:
     """Randomise output class
 
-    Used to contain information about FSL randomise run.
+    This class is used to contain information about FSL randomise run,
+    from a randomise stats output directory. The input directory should
+    have following files inside it.
+
+    1. randomise output statistic files. (one more more)
+        - `*${modality}*corrp*.nii.gz`
+        - make sure the modality is included in the stat file name.
+    2. merged skeleton file for all subjects.
+        - `all_${modality}*_skeleton.nii.gz`
+        - make sure the modality is included in the merged skeleton file name.
+    3. design matrix and design contrast files used for the randomise.
+        - It will be most handy to have them named `design.con` and
+          `design.mat`
 
     Key arguments:
-    location -- str or Path object of a randomise output location.
-              Preferably with a 'design.con' and 'design.mat' inside.
-              (default:'.')
-    contrast_file -- design contrast file used as the input for randomise.
-                     (default:'design.con')
-    matrix_file -- design matrix file used as the input for randomise.
-                   (default:'design.mat')
-
-    Below argument has been removed from RandomiseRun:
-    threshold -- float, 1-p value used to threhold for significance.
-                 (default:0.95)
+        location: str or Path object of a randomise output location.
+                  Preferably with a 'design.con' and 'design.mat' in the same
+                  directory.
+        contrast_file: str, randomise contrast file.
+                       default='design.con'
+        matrix_file: str, randomise matrix file.
+                     default='design.mat'
     """
-
     def __init__(self,
                  location='.',
                  contrast_file='design.con',
@@ -283,28 +288,43 @@ class RandomiseRun:
 class CorrpMap(RandomiseRun):
     """Multiple comparison corrected randomise output class
 
-    Used to contain information about corrected p maps of randomise outputs
+    This class is used to extract information from the corrected-p maps of
+    randomise output. It also reads in design contrast and matrix files, as
+    well as the merged skeleton file to summarize information from the
+    randomise comparison.
+
+    Current pipeline is optimized for TBSS pipeline that uses ENIGMA target
+    skeleton.
 
     Key arguments:
-    loc -- str or Path object, location for the corrp map.
-    threshold -- float, 1-p threhold for significance.
+        loc: str or Path object, location for the corrp map.
+        threshold: float, fsl-style (1-p) threhold for significance.
+                   default=0.95
     """
 
-    def __init__(self, location, threshold):
+    def __init__(self, location, threshold=0.95):
         self.location = Path(location)
         self.name = self.location.name
+        self.threshold = threshold
 
         # if modality is included in its name
         try:
             self.modality = re.search(
-                '.*(FW|FA|MD|RD|AD|MD|FAt|FAc|FAk|MK|MKc|MKk|MDt|RDt|ADt|MDt)_',
+                r'.*(FW|FA|MD|RD|AD|MD|FAt|'
+                r'FAc|FAk|MK|MKc|MKk|MDt|RDt|ADt|MDt)_',
                 self.location.name).group(1)
         except:
             self.modality = ''
 
-        # find all merged file
-        self.get_merged_skeleton_file()
-        self.threshold = threshold
+        # find merged skeleton file
+        merged_skel_pattern = [f'*all*_{self.modality}[_.]*nii.gz',
+                               f'*{self.modality}*merged*.nii.gz']
+        self.merged_4d_file = search_and_select_one(
+            'merged_skeleton',
+            self.location.parent,
+            merged_skel_pattern)
+
+        # information from the file name
         self.test_kind = re.search(r'(\w)stat\d+.nii.gz', self.name).group(1)
         self.stat_num = re.search(r'(\d+).nii.gz', self.name).group(1)
 
@@ -316,7 +336,7 @@ class CorrpMap(RandomiseRun):
         self.HO_sub_thr0_1mm = self.HO_dir / \
             'HarvardOxford-sub-maxprob-thr0-1mm.nii.gz'
 
-        # enigma FA map - background settings
+        # enigma settings
         self.enigma_dir = Path('/data/pnl/soft/pnlpipe3/tbss/data/enigmaDTI')
         self.enigma_fa_loc = self.enigma_dir / 'ENIGMA_DTI_FA.nii.gz'
         self.enigma_skeleton_mask_loc = self.enigma_dir / \
@@ -327,53 +347,6 @@ class CorrpMap(RandomiseRun):
             self.get_significant_info()
             self.get_significant_overlap_with_HO()
         self.make_df()
-
-    def get_merged_skeleton_file(self):
-        """Search for the matching merged skeleton files
-
-        Searches for the merged skeleton files based on the detected modality.
-        """
-        # list of directories and serach patterns
-        list_search_directories = [
-                self.location.parent,
-                self.location.parent.parent
-            ]
-        list_of_patters = [
-            f'*all*_{self.modality}[_.]*nii.gz',
-            f'*{self.modality}*merged*.nii.gz'
-            ]
-        # get combinations of the two lists
-        list_of_dir_pat = list(product(
-            list_search_directories,
-            list_of_patters))
-
-        # search files
-        matching_files = []
-        for s_dir, pat in list_of_dir_pat:
-            try:
-                mf = list(Path(s_dir).glob(pat))
-                matching_files += mf
-            except:
-                pass
-
-        matching_files = list(set(matching_files))
-        # check matching_files list
-        if len(matching_files) == 1:
-            self.merged_4d_file = matching_files[0]
-        elif len(matching_files) > 1:
-            questions = [
-                inquirer.List(
-                    'merged_file',
-                    message="There are more than one matching merged 4d "
-                            f"skeleton for {self.location.name}. "
-                            "Which is the correct merged file?",
-                    choices=matching_files,
-                    )
-                ]
-            answer = inquirer.prompt(questions)
-            self.merged_4d_file = answer['merged_file']
-        else:
-            self.merged_4d_file = 'missing'
 
     def check_significance(self):
         """Check whether there is any significant voxel"""
