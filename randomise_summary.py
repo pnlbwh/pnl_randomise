@@ -365,7 +365,6 @@ class CorrpMap(RandomiseRun):
             self.significant:  any voxels greater than `self.threshold`
             self.corrp_data: and returns array data (only if there are any
                              voxels greater than `self.threshold`)
-
         """
 
         # read corrp images
@@ -414,47 +413,47 @@ class CorrpMap(RandomiseRun):
         self.significant_voxel_max = 1 - sig_vox_array.max()
 
     def get_significant_overlap_with_HO(self):
-        """Get overlap information of significant voxels with Harvard Oxford"""
-        # Number of voxels in each hemisphere
-        # Harvard-Oxford left and right hemisphere white matter masks
-        # TODO: what to do if template space is not same as the HO space?
+        """Get overlap information of significant voxels with Harvard Oxford
+
+        The Harvard-Oxford template has the left and right hemisphere labels.
+        It estimates a map >= `self.threshold`, then count number of voxels,
+        as well as percentage of significant voxels.
+
+        TODO:
+            - In enigma template, there are voxels that are not included in
+              either labels of the Harvard-Oxford left and right hemispheres.
+        """
         HO_data = nb.load(str(self.HO_sub_thr0_1mm)).get_data()
 
         # Few voxels from ENIGMA template skeleton spreads into the area
         # defined as a gray matter by Harvard Oxford atlas
         try:
-            left_mask_array = np.where((HO_data == 1) +
-                                       (HO_data == 2), 1, 0)
-            left_skeleton_array = self.corrp_data * left_mask_array
-            right_mask_array = np.where((HO_data == 12) +
-                                        (HO_data == 13), 1, 0)
-            right_skeleton_array = self.corrp_data * right_mask_array
+            for side, label_num in zip(['left', 'right'],
+                                       [[1, 2], [12, 13]]):
+                # get overlaps with each hemisphere
+                side_mask_array = np.where(
+                    (HO_data == label_num[0]) +
+                    (HO_data == label_num[1]), 1, 0)
+                side_skeleton_array = self.corrp_data * side_mask_array
 
-            # count significant voxels in each hemispheres
-            self.significant_voxel_left_num = np.sum(
-                left_skeleton_array >= self.threshold)
-            self.significant_voxel_right_num = np.sum(
-                right_skeleton_array >= self.threshold)
+                # get number of significant voxels
+                significant_voxel_side_num = \
+                    np.sum(side_skeleton_array >= self.threshold)
+                setattr(self, f'significant_voxel_{side}_num',
+                        significant_voxel_side_num)
 
-            if np.count_nonzero(left_skeleton_array) == 0:
-                self.significant_voxel_left_percent = 0
-            else:
-                self.significant_voxel_left_percent = (
-                    self.significant_voxel_left_num /
-                    np.count_nonzero(left_skeleton_array)) * 100
-
-            if np.count_nonzero(right_skeleton_array) == 0:
-                self.significant_voxel_right_percent = 0
-            else:
-                self.significant_voxel_right_percent = (
-                    self.significant_voxel_right_num /
-                    np.count_nonzero(right_skeleton_array)) * 100
+                # get percentage significant voxels in each hemisphere
+                if np.count_nonzero(side_skeleton_array) == 0:
+                    setattr(self, f'significant_voxel_{side}_percent', 0)
+                else:
+                    setattr(self, f'significant_voxel_{side}_percent',
+                            (significant_voxel_side_num /
+                                np.count_nonzero(side_skeleton_array)) * 100)
         except:
             print('** This study has a specific template. The number of '
                   'significant voxels in the left and right hemisphere '
                   'will not be estimated')
-            self.significant_voxel_right_percent = 'unknown'
-            self.significant_voxel_left_percent = 'unknown'
+            setattr(self, f'significant_voxel_{side}_percent', 'unknown')
 
     def make_df(self):
         """Make summary pandas df of each corrp maps"""
