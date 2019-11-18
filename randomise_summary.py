@@ -347,14 +347,26 @@ class CorrpMap(RandomiseRun):
         self.enigma_skeleton_mask_loc = self.enigma_dir / \
             'ENIGMA_DTI_FA_skeleton_mask.nii.gz'
 
+        # checking significance
         self.check_significance()
         if self.significant:
             self.get_significant_info()
             self.get_significant_overlap_with_HO()
+
+        # summary in pandas DataFrame
         self.make_df()
 
     def check_significance(self):
-        """Check whether there is any significant voxel"""
+        """Any voxels with greater value than self.threshold
+
+        The nifti file in the `self.location` is read and checked for
+            self.data_shape:  shape
+            self.voxel_max_p:  maximum intensity value
+            self.significant:  any voxels greater than `self.threshold`
+            self.corrp_data: and returns array data (only if there are any
+                             voxels greater than `self.threshold`)
+
+        """
 
         # read corrp images
         img = nb.load(str(self.location))
@@ -378,7 +390,6 @@ class CorrpMap(RandomiseRun):
         if (data >= self.threshold).any():
             self.significant = True
             self.corrp_data = data
-
         else:
             self.significant = False
 
