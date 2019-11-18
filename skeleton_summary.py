@@ -9,11 +9,11 @@ import pandas as pd
 from pathlib import Path
 
 # import print option
-from kchopy.kcho_utils import print_df
+# from kchopy.kcho_utils import print_df
 
 # figure
 import seaborn as sns
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 # stats
 from itertools import combinations
@@ -70,22 +70,13 @@ class MergedSkeleton:
         # get difference of the binarized map to the target skeleton
         # not working here**
         target_data = nb.load(str(self.enigma_skeleton_mask_loc)).get_data()
-        mask = target_data == 1
 
-        # below line does not work, as if you binarize the sum like this
-        # there will be whole skeleton
+        # assign 1 for voxels where all subject have skeleton
+        # assign 0 for voxels where only some subjects have skeleton
         self.skeleton_alteration_map = np.where(
             (self.merged_skeleton_data_bin_mean != 0) &
             (self.merged_skeleton_data_bin_mean != 1),
             1, 0)
-
-        # bin_sum_binarized = np.where(
-            # self.merged_skeleton_data_bin_sum != 0, 1, 0)
-        # diff_map = bin_sum_binarized - target_data
-        # print(diff_map[mask].std())
-        # rms_diff = np.sqrt(diff_map ** 2)
-        # self.binary_diff_map = rms_diff
-        # print(self.binary_diff_map[mask].mean())
 
     def subject_level_summary(self):
         """Summarize subject skeletons
