@@ -325,9 +325,8 @@ class CorrpMap(RandomiseRun):
                                f'*{self.modality}*merged*.nii.gz']
         self.merged_4d_file = search_and_select_one(
             'merged_skeleton',
-            self.location.parent,
+l           self.location.parent,
             merged_skel_pattern)
-        print(self.merged_4d_file)
 
         # information from the file name
         self.test_kind = re.search(r'(\w)stat\d+.nii.gz', self.name).group(1)
@@ -584,6 +583,7 @@ class CorrpMap(RandomiseRun):
                 -m {thresholded_map.name} \
                 -a "JHU ICBM-DTI-81 White-Matter Labels"'
         text_label = os.popen(command).read()
+
         # tract
         command = f'atlasquery \
                 -m {thresholded_map.name} \
@@ -628,7 +628,8 @@ class CorrpMap(RandomiseRun):
             data=df_query).reset_index()
 
         # TODO: change here later
-        self.df_query = self.df_query.groupby('atlas').get_group('Labels')
+        # self.df_query = self.df_query.groupby('atlas').get_group('Labels')
+        self.df_query = self.df_query.sort_values('atlas')
 
 
     def get_figure_enigma(self, **kwargs):
@@ -1010,29 +1011,9 @@ if __name__ == '__main__':
         values_df = pd.DataFrame()
         for corrpMap in corrp_map_classes:
             if corrpMap.significant:
-                print('-'*80)
-                print(corrpMap.name)
-                print(corrpMap.modality)
-                try:
-                    # find merged_4d_file
-                    merged_4d_file = list(Path(args.merged_img_dir).glob(
-                        f'*all*_{corrpMap.modality}[_.]*nii.gz'))[0]
-                except:
-                    # print("missing all merged file")
-                    sys.exit('missing all merged file')
-                    # questions = [
-                            # inquirer.List(
-                                # 'merged 4d file',
-                                # message="Merged 4d file",
-                                # choices=[],
-                                # )),
-                            # ]
-                    # merged_4d_file = inquirer.prompt(questions)
-                corrpMap.merged_4d_file = merged_4d_file
                 corrpMap.update_with_4d_data()
-                values_df = pd.concat([values_df,
-                                       corrpMap.cluster_averages_df],
-                                      axis=1)
+                values_df = pd.concat(
+                    [values_df, corrpMap.cluster_averages_df], axis=1)
 
         # if any of corrp map had significant voxels
         try:
