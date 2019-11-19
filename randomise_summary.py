@@ -798,20 +798,12 @@ def skeleton_summary(corrpMap):
     print(out_image_loc)
     mergedSkeleton.g.savefig(out_image_loc, dpi=200)
 
+    # skeleton summary figures
+    # enigma settings
     mergedSkeleton.enigma_fa_loc = corrpMap.enigma_fa_loc
     mergedSkeleton.enigma_skeleton_mask_loc = corrpMap.enigma_skeleton_mask_loc
     mergedSkeleton.data_shape = corrpMap.data_shape
     mergedSkeleton.threshold = 0.01
-
-    # Save mean and std maps
-    img = nb.load(str(corrpMap.merged_4d_file))
-    # nb.Nifti1Image(mergedSkeleton.merged_skeleton_mean_map,
-                   # affine=img.affine).to_filename('skeleton_mean.nii.gz')
-    # nb.Nifti1Image(mergedSkeleton.merged_skeleton_mean_map,
-                   # affine=img.affine).to_filename('skeleton_std.nii.gz')
-    nb.Nifti1Image(
-        mergedSkeleton.skeleton_alteration_map,
-        affine=img.affine).to_filename('skeleton_enigma_diff_map.nii.gz')
 
     # plot average map through `get_figure_enigma` function
     mergedSkeleton.corrp_data = mergedSkeleton.merged_skeleton_mean_map
