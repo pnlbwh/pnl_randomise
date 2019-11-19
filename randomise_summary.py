@@ -790,12 +790,13 @@ def skeleton_summary(corrpMap):
         })
 
     # Whole skeleton average for each subjects for each group
+    print('Creating figures')
     SkeletonDir.get_group_figure(mergedSkeleton)
     out_image_loc = re.sub('.nii.gz',
                            '_skeleton_average_for_all_subjects.png',
                            str(corrpMap.merged_4d_file))
-    print(out_image_loc)
     mergedSkeleton.g.savefig(out_image_loc, dpi=200)
+    print('\t- Average for the skeleton in each subjects')
 
     # skeleton summary figures
     # enigma settings
@@ -820,18 +821,18 @@ def skeleton_summary(corrpMap):
              'All skeleton standard deviation map',
              'Sum of binarized skeleton maps for all subjects',
              'Highlighting variability among binarized skeleton maps']):
+        # set data input in order to use CorrpMap.get_figure_enigma function
         mergedSkeleton.corrp_data = map_data
         CorrpMap.get_figure_enigma(mergedSkeleton)
         # dark figure background
         plt.style.use('dark_background')
         # title
+        print('\t- ' + title)
         mergedSkeleton.fig.suptitle(
             title + f'\n{corrpMap.merged_4d_file}',
-            y=0.95,
-            fontsize=20)
+            y=0.95, fontsize=20)
         out_image_loc = re.sub('.nii.gz', name_out_png,
                                str(corrpMap.merged_4d_file))
-        print(out_image_loc)
 
 
 if __name__ == '__main__':
@@ -1067,9 +1068,12 @@ if __name__ == '__main__':
 
     # skeleton summary parts
     if args.skeleton_summary:
+        summarized_merged_maps = []
         for corrpMap in corrp_map_classes:
-            if corrpMap.significant is True:
-                if hasattr(corrpMap, 'merged_4d_file'):
-                    print_head("Summarizing merged 4d file:"
-                               f"{corrpMap.merged_4d_file}")
-                    skeleton_summary(corrpMap)
+            if hasattr(corrpMap, 'merged_4d_file') and \
+               corrpMap.merged_4d_file not in summarized_merged_maps and \
+               corrpMap.merged_4d_file != 'missing':
+                print_head("Summarizing merged 4d file:"
+                           f"{corrpMap.merged_4d_file}")
+                skeleton_summary(corrpMap)
+                summarized_merged_maps.append(corrpMap.merged_4d_file)

@@ -28,7 +28,7 @@ class MergedSkeleton:
         """Read in merged skeleton nifti file"""
         self.merged_skeleton_loc = merged_skeleton_loc
         self.merged_skeleton_img = nb.load(str(self.merged_skeleton_loc))
-        print_head(f"Reading {merged_skeleton_loc}")
+        print(f"Reading {merged_skeleton_loc}")
         self.merged_skeleton_data = self.merged_skeleton_img.get_data()
 
         # ENIGMA
@@ -173,7 +173,6 @@ class SkeletonDir:
         else:
             height_step = 0.8 / (len(two_groups_perm) + 1)
 
-        print(height_step)
         # two group comparisons
         # TODO: add ANCOVA
         for g1, g2 in two_groups_perm:
