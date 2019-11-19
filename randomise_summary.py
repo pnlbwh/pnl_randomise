@@ -16,13 +16,10 @@ import re
 import numpy as np
 from os import environ
 import os
-import sys
 
 # utils
 from kchopy.kcho_utils import print_df, print_head, search_and_select_one
 from skeleton_summary import MergedSkeleton, SkeletonDir
-from itertools import product
-import inquirer
 
 mpl.use('Agg')
 pd.set_option('mode.chained_assignment', None)
