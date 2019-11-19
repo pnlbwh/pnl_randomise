@@ -148,7 +148,10 @@ class SkeletonDir:
                 data=self.df)
 
         if self.df['mean'].mean() < 0.005:
-            self.g.ax.set_ylim(self.df['mean'].min(), self.df['mean'].max())
+            self.g.ax.set_ylim(
+                self.df['mean'].min() - (self.df['mean'].std()/3),
+                self.df['mean'].max() - (self.df['mean'].std()/3)
+                )
 
         self.g.fig.set_size_inches(8, 4)
         self.g.fig.set_dpi(150)
