@@ -139,7 +139,14 @@ class SkeletonDir:
         self.df = pd.merge(self.df, demo_df, on=merge_on, how='left')
 
     def get_group_figure(self):
-        self.g = sns.catplot(x='group', y='mean', hue='group', data=self.df)
+
+        self.g = sns.catplot(
+                x='group',
+                y='mean',
+                hue='group',
+                hue_order=self.df.group.unique(),
+                data=self.df)
+
         self.g.fig.set_size_inches(8, 4)
         self.g.fig.set_dpi(150)
         self.g.ax.set_ylabel(f'{self.modality}')
@@ -158,7 +165,9 @@ class SkeletonDir:
 
         # average line
         line_width = 0.3
-        for num, (group, table) in enumerate(self.df.groupby('group')):
+        gb = self.df.groupby('group')
+        for num, group in enumerate(self.df.group.unique()):
+            table = gb.get_group(group)
             average = table['mean'].mean()
             self.g.ax.plot([num-line_width, num+line_width],
                            [average, average])

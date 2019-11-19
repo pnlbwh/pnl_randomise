@@ -792,6 +792,7 @@ def skeleton_summary(corrpMap):
     # Whole skeleton average for each subjects for each group
     print('Creating figures')
     SkeletonDir.get_group_figure(mergedSkeleton)
+    plt.style.use('seaborn')
     out_image_loc = re.sub('.nii.gz',
                            '_skeleton_average_for_all_subjects.png',
                            str(corrpMap.merged_4d_file))
