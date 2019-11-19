@@ -16,13 +16,10 @@ import re
 import numpy as np
 from os import environ
 import os
-import sys
 
 # utils
 from kchopy.kcho_utils import print_df, print_head, search_and_select_one
 from skeleton_summary import MergedSkeleton, SkeletonDir
-from itertools import product
-import inquirer
 
 mpl.use('Agg')
 pd.set_option('mode.chained_assignment', None)
@@ -754,6 +751,7 @@ class CorrpMap(RandomiseRun):
         # Set y tick label color
         cbytick_obj = plt.getp(cb.ax, 'yticklabels')
 
+        plt.style.use('dark_background')
         plt.setp(cbytick_obj, color='white')
         cb.outline.set_edgecolor('white')
         cb.ax.yaxis.set_tick_params(color='white')
@@ -783,7 +781,6 @@ def skeleton_summary(corrpMap):
     # corrpMap.get_matrix_info()
     group_list = corrpMap.matrix_df[corrpMap.group_cols].astype(
         'int').to_string(header=False, index=False).split('\n')
-            # lambda row: f'{[x for x in l}', axis=1).tolist()
 
     # group list
     mergedSkeleton.df = pd.DataFrame({
@@ -794,98 +791,53 @@ def skeleton_summary(corrpMap):
         })
 
     # Whole skeleton average for each subjects for each group
+    print('Creating figures')
+    plt.style.use('default')
     SkeletonDir.get_group_figure(mergedSkeleton)
+    # plt.style.use('seaborn')
     out_image_loc = re.sub('.nii.gz',
                            '_skeleton_average_for_all_subjects.png',
                            str(corrpMap.merged_4d_file))
-    print(out_image_loc)
-    mergedSkeleton.g.savefig(out_image_loc, dpi=200)
+    mergedSkeleton.g.savefig(out_image_loc, facecolor='white', dpi=200)
+    print('\t- Average for the skeleton in each subjects')
 
+    # skeleton summary figures
+    # enigma settingr
     mergedSkeleton.enigma_fa_loc = corrpMap.enigma_fa_loc
     mergedSkeleton.enigma_skeleton_mask_loc = corrpMap.enigma_skeleton_mask_loc
     mergedSkeleton.data_shape = corrpMap.data_shape
     mergedSkeleton.threshold = 0.01
-
-    # Save mean and std maps
-    img = nb.load(str(corrpMap.merged_4d_file))
-    # nb.Nifti1Image(mergedSkeleton.merged_skeleton_mean_map,
-                   # affine=img.affine).to_filename('skeleton_mean.nii.gz')
-    # nb.Nifti1Image(mergedSkeleton.merged_skeleton_mean_map,
-                   # affine=img.affine).to_filename('skeleton_std.nii.gz')
-    nb.Nifti1Image(
-        mergedSkeleton.skeleton_alteration_map,
-        affine=img.affine).to_filename('skeleton_enigma_diff_map.nii.gz')
-
-    # plot average map through `get_figure_enigma` function
-    mergedSkeleton.corrp_data = mergedSkeleton.merged_skeleton_mean_map
-    CorrpMap.get_figure_enigma(mergedSkeleton)
-    # dark figure background
-    plt.style.use('dark_background')
-    # title
-    mergedSkeleton.fig.suptitle(
-        f'All skeleton average map\n{corrpMap.merged_4d_file}',
-        y=0.95,
-        fontsize=20)
-    out_image_loc = re.sub('.nii.gz', '_average.png',
-                           str(corrpMap.merged_4d_file))
-    print(out_image_loc)
-    mergedSkeleton.fig.savefig(out_image_loc, dpi=200)
-
-    # plot std map through `get_figure_enigma` function
-    mergedSkeleton.corrp_data = mergedSkeleton.merged_skeleton_std_map
-    mergedSkeleton.main_data_vmax = 'free'
-    CorrpMap.get_figure_enigma(mergedSkeleton)
-    # dark figure background
-    plt.style.use('dark_background')
-    # title
-    mergedSkeleton.fig.suptitle(
-        f'All skeleton standard deviation map\n{corrpMap.merged_4d_file}',
-        y=0.95,
-        fontsize=20)
-    out_image_loc = re.sub('.nii.gz', '_std.png',
-                           str(corrpMap.merged_4d_file))
-    print(out_image_loc)
-    mergedSkeleton.fig.savefig(out_image_loc, dpi=200)
-
-    # plot binnarized sum map through `get_figure_enigma` function
-    mergedSkeleton.corrp_data = mergedSkeleton.merged_skeleton_data_bin_sum
-    mergedSkeleton.main_data_vmax = 'free'
-    CorrpMap.get_figure_enigma(mergedSkeleton)
-    # dark figure background
-    plt.style.use('dark_background')
-    # title
-    mergedSkeleton.fig.suptitle(
-        f'Sum of binarized skeleton maps\n{corrpMap.merged_4d_file}',
-        y=0.95,
-        fontsize=20)
-    out_image_loc = re.sub('.nii.gz', '_bin_sum.png',
-                           str(corrpMap.merged_4d_file))
-    print(out_image_loc)
-    mergedSkeleton.fig.savefig(out_image_loc, dpi=200)
-
-    # plot diff map between the binary sum map vs ENIGMA template
-    # through `get_figure_enigma` function
 
     # enlarge the alteration map
     mergedSkeleton.skeleton_alteration_map = ndimage.binary_dilation(
             mergedSkeleton.skeleton_alteration_map,
             iterations=7).astype(mergedSkeleton.skeleton_alteration_map.dtype)
 
-    mergedSkeleton.corrp_data = mergedSkeleton.skeleton_alteration_map
-    mergedSkeleton.main_data_vmax = 'free'
-    CorrpMap.get_figure_enigma(mergedSkeleton)
-    # dark figure background
-    plt.style.use('dark_background')
-    # title
-    mergedSkeleton.fig.suptitle(
-        f'Difference betwenn the sum of binarized skeleton maps\n'
-        f'and ENIGMA template\n{corrpMap.merged_4d_file}',
-        y=0.95,
-        fontsize=20)
-    out_image_loc = re.sub('.nii.gz', '_bin_sum_diff_to_enigma.png',
-                           str(corrpMap.merged_4d_file))
-    print(out_image_loc)
-    mergedSkeleton.fig.savefig(out_image_loc, dpi=200)
+    # plot average map through `get_figure_enigma` function
+    for map_data, name_out_png, title in zip(
+            [mergedSkeleton.merged_skeleton_mean_map,
+             mergedSkeleton.merged_skeleton_std_map,
+             mergedSkeleton.merged_skeleton_data_bin_sum,
+             mergedSkeleton.skeleton_alteration_map],
+            ['_average.png', '_std.png', '_bin_sum.png', '_bin_sum_diff.png'],
+            ['All skeleton average map',
+             'All skeleton standard deviation map',
+             'Sum of binarized skeleton maps for all subjects',
+             'Highlighting variability among binarized skeleton maps']):
+        # set data input in order to use CorrpMap.get_figure_enigma function
+        mergedSkeleton.corrp_data = map_data
+        plt.style.use('dark_background')
+        CorrpMap.get_figure_enigma(mergedSkeleton)
+        # dark figure background
+
+        # title
+        print('\t- ' + title)
+        mergedSkeleton.fig.suptitle(
+            title + f'\n{corrpMap.merged_4d_file}',
+            y=0.95, fontsize=20)
+        out_image_loc = re.sub('.nii.gz', name_out_png,
+                               str(corrpMap.merged_4d_file))
+        mergedSkeleton.fig.savefig(out_image_loc, facecolor='black', dpi=200)
 
 
 if __name__ == '__main__':
@@ -1096,9 +1048,6 @@ if __name__ == '__main__':
                 else:
                     corrpMap.get_figure_enigma(mean_fa=args.template)
 
-                # dark figure background
-                plt.style.use('dark_background')
-
                 # title
                 try:
                     corrpMap.fig.suptitle(
@@ -1121,9 +1070,12 @@ if __name__ == '__main__':
 
     # skeleton summary parts
     if args.skeleton_summary:
+        summarized_merged_maps = []
         for corrpMap in corrp_map_classes:
-            if corrpMap.significant is True:
-                if hasattr(corrpMap, 'merged_4d_file'):
-                    print_head("Summarizing merged 4d file:"
-                               f"{corrpMap.merged_4d_file}")
-                    skeleton_summary(corrpMap)
+            if hasattr(corrpMap, 'merged_4d_file') and \
+               corrpMap.merged_4d_file not in summarized_merged_maps and \
+               corrpMap.merged_4d_file != 'missing':
+                print_head("Summarizing merged 4d file:"
+                           f"{corrpMap.merged_4d_file}")
+                skeleton_summary(corrpMap)
+                summarized_merged_maps.append(corrpMap.merged_4d_file)
