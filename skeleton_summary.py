@@ -147,6 +147,9 @@ class SkeletonDir:
                 hue_order=self.df.group.unique(),
                 data=self.df)
 
+        if self.df['mean'].mean() < 0.005:
+            self.g.ax.set_ylim(self.df['mean'].min(), self.df['mean'].max())
+
         self.g.fig.set_size_inches(8, 4)
         self.g.fig.set_dpi(150)
         self.g.ax.set_ylabel(f'{self.modality}')

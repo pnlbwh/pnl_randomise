@@ -751,6 +751,7 @@ class CorrpMap(RandomiseRun):
         # Set y tick label color
         cbytick_obj = plt.getp(cb.ax, 'yticklabels')
 
+        plt.style.use('dark_background')
         plt.setp(cbytick_obj, color='white')
         cb.outline.set_edgecolor('white')
         cb.ax.yaxis.set_tick_params(color='white')
@@ -791,16 +792,17 @@ def skeleton_summary(corrpMap):
 
     # Whole skeleton average for each subjects for each group
     print('Creating figures')
+    plt.style.use('default')
     SkeletonDir.get_group_figure(mergedSkeleton)
-    plt.style.use('seaborn')
+    # plt.style.use('seaborn')
     out_image_loc = re.sub('.nii.gz',
                            '_skeleton_average_for_all_subjects.png',
                            str(corrpMap.merged_4d_file))
-    mergedSkeleton.g.savefig(out_image_loc, dpi=200)
+    mergedSkeleton.g.savefig(out_image_loc, facecolor='white', dpi=200)
     print('\t- Average for the skeleton in each subjects')
 
     # skeleton summary figures
-    # enigma settings
+    # enigma settingr
     mergedSkeleton.enigma_fa_loc = corrpMap.enigma_fa_loc
     mergedSkeleton.enigma_skeleton_mask_loc = corrpMap.enigma_skeleton_mask_loc
     mergedSkeleton.data_shape = corrpMap.data_shape
@@ -824,9 +826,10 @@ def skeleton_summary(corrpMap):
              'Highlighting variability among binarized skeleton maps']):
         # set data input in order to use CorrpMap.get_figure_enigma function
         mergedSkeleton.corrp_data = map_data
+        plt.style.use('dark_background')
         CorrpMap.get_figure_enigma(mergedSkeleton)
         # dark figure background
-        plt.style.use('dark_background')
+
         # title
         print('\t- ' + title)
         mergedSkeleton.fig.suptitle(
@@ -834,6 +837,7 @@ def skeleton_summary(corrpMap):
             y=0.95, fontsize=20)
         out_image_loc = re.sub('.nii.gz', name_out_png,
                                str(corrpMap.merged_4d_file))
+        mergedSkeleton.fig.savefig(out_image_loc, facecolor='black', dpi=200)
 
 
 if __name__ == '__main__':
@@ -1043,9 +1047,6 @@ if __name__ == '__main__':
                     corrpMap.get_figure_enigma()
                 else:
                     corrpMap.get_figure_enigma(mean_fa=args.template)
-
-                # dark figure background
-                plt.style.use('dark_background')
 
                 # title
                 try:
