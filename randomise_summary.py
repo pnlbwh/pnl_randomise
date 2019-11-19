@@ -799,6 +799,7 @@ def skeleton_summary(corrpMap):
                            '_skeleton_average_for_all_subjects.png',
                            str(corrpMap.merged_4d_file))
     mergedSkeleton.g.savefig(out_image_loc, facecolor='white', dpi=200)
+    plt.close(mergedSkeleton.g.fig)
     print('\t- Average for the skeleton in each subjects')
 
     # skeleton summary figures
@@ -838,6 +839,7 @@ def skeleton_summary(corrpMap):
         out_image_loc = re.sub('.nii.gz', name_out_png,
                                str(corrpMap.merged_4d_file))
         mergedSkeleton.fig.savefig(out_image_loc, facecolor='black', dpi=200)
+        plt.close(mergedSkeleton.g.fig)
 
 
 if __name__ == '__main__':
@@ -1066,6 +1068,7 @@ if __name__ == '__main__':
                                        str(corrpMap.location))
                 print(out_image_loc)
                 corrpMap.fig.savefig(out_image_loc, dpi=200)
+                plt.close(corrpMpa.fig)
                 #corrpMap.fig.savefig('/PHShome/kc244/out_image_loc.png', dpi=100)
 
     # skeleton summary parts
