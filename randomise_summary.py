@@ -19,6 +19,8 @@ import os
 import sys
 
 # utils
+import sys
+sys.path.append('/data/pnl/kcho/PNLBWH/kchopy')
 from kchopy.kcho_utils import print_df, print_head, search_and_select_one
 from skeleton_summary import MergedSkeleton, SkeletonDir
 
