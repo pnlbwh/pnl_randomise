@@ -1098,10 +1098,11 @@ if __name__ == '__main__':
     if args.skeleton_summary:
         summarized_merged_maps = []
         for corrpMap in corrp_map_classes:
-            if hasattr(corrpMap, 'merged_4d_file') and \
-               corrpMap.merged_4d_file not in summarized_merged_maps and \
-               corrpMap.merged_4d_file != 'missing':
-                print_head("Summarizing merged 4d file:"
-                           f"{corrpMap.merged_4d_file}")
-                skeleton_summary(corrpMap)
-                summarized_merged_maps.append(corrpMap.merged_4d_file)
+            if corrpMap.modality in ['FA', 'FW']:
+                if hasattr(corrpMap, 'merged_4d_file') and \
+                   corrpMap.merged_4d_file not in summarized_merged_maps and \
+                   corrpMap.merged_4d_file != 'missing':
+                    print_head("Summarizing merged 4d file:"
+                               f"{corrpMap.merged_4d_file}")
+                    skeleton_summary(corrpMap)
+                    summarized_merged_maps.append(corrpMap.merged_4d_file)
