@@ -16,6 +16,7 @@ import re
 import numpy as np
 from os import environ
 import os
+import sys
 
 # utils
 from kchopy.kcho_utils import print_df, print_head, search_and_select_one
@@ -678,11 +679,12 @@ class CorrpMap(RandomiseRun):
                             np.nan,
                             self.corrp_data_filled)
 
-        elif hasattr(self, 'main_data_vmax'):
-            # for skeleton std data plot
-            data = np.where(self.corrp_data == 0,
-                            np.nan,
-                            self.corrp_data)
+        elif hasattr(self, 'type'):
+            if self.type in ['average', 'std', 'bin_sum', 'bin_sum_diff']:
+                # for skeleton std data plot
+                data = np.where(self.corrp_data == 0,
+                                np.nan,
+                                self.corrp_data)
 
         else:
             # Make voxels with their intensities lower than data_vmin
@@ -690,6 +692,19 @@ class CorrpMap(RandomiseRun):
             data = np.where(self.corrp_data < self.threshold,
                             np.nan,
                             self.corrp_data)
+
+        if hasattr(self, 'vmin'):
+            vmin = self.vmin
+        else:
+            vmin = self.threshold
+        
+        if hasattr(self, 'vmax'):
+            if self.vmax == 'free':
+                vmax = self.corrp_data.max()
+            else:
+                vmax = self.vmax
+        else:
+            vmax = 1
 
         self.enigma_skeleton_data = np.where(
             self.enigma_skeleton_data < 1,
@@ -724,20 +739,20 @@ class CorrpMap(RandomiseRun):
                                 interpolation=None,
                                 vmin=0,
                                 vmax=1)
-            elif hasattr(self, 'main_data_vmax'):
-                # for skeleton std data plot
-                if self.main_data_vmax == 'free':
-                    img = ax.imshow(np.flipud(data[:, :, slice_nums[num]].T),
-                                    interpolation=None,
-                                    cmap='cool',
-                                    vmin=0)
+            # elif hasattr(self, 'main_data_vmax'):
+                # # for skeleton std data plot
+                # if self.main_data_vmax == 'free':
+                    # img = ax.imshow(np.flipud(data[:, :, slice_nums[num]].T),
+                                    # interpolation=None,
+                                    # cmap='cool',
+                                    # vmin=0)
             else:
                 # stat maps
                 img = ax.imshow(np.flipud(data[:, :, slice_nums[num]].T),
                                 interpolation=None,
                                 cmap='autumn',
-                                vmin=self.threshold,
-                                vmax=1)
+                                vmin=vmin,
+                                vmax=vmax)
             ax.axis('off')
             ax.annotate('z = {}'.format(slice_nums[num]),
                         (0.01, 0.1),
@@ -799,7 +814,7 @@ def skeleton_summary(corrpMap):
                            '_skeleton_average_for_all_subjects.png',
                            str(corrpMap.merged_4d_file))
     mergedSkeleton.g.savefig(out_image_loc, facecolor='white', dpi=200)
-    plt.close(mergedSkeleton.g.fig)
+    plt.close()
     print('\t- Average for the skeleton in each subjects')
 
     # skeleton summary figures
@@ -815,19 +830,25 @@ def skeleton_summary(corrpMap):
             iterations=7).astype(mergedSkeleton.skeleton_alteration_map.dtype)
 
     # plot average map through `get_figure_enigma` function
-    for map_data, name_out_png, title in zip(
+    # TODO SPLIT below back again
+    for map_data, name_out_png, title, vmin, vmax in zip(
             [mergedSkeleton.merged_skeleton_mean_map,
              mergedSkeleton.merged_skeleton_std_map,
              mergedSkeleton.merged_skeleton_data_bin_sum,
              mergedSkeleton.skeleton_alteration_map],
-            ['_average.png', '_std.png', '_bin_sum.png', '_bin_sum_diff.png'],
+            ['average', 'std', 'bin_sum', 'bin_sum_diff'],
             ['All skeleton average map',
              'All skeleton standard deviation map',
              'Sum of binarized skeleton maps for all subjects',
-             'Highlighting variability among binarized skeleton maps']):
+             'Highlighting variability among binarized skeleton maps'],
+            [0, 0, 0, 0],
+            ['free', 'free', 'free', 1]):
         # set data input in order to use CorrpMap.get_figure_enigma function
         mergedSkeleton.corrp_data = map_data
+        mergedSkeleton.type = name_out_png
         plt.style.use('dark_background')
+        mergedSkeleton.vmin = map_data[map_data != 0].min()
+        mergedSkeleton.vmax = vmax
         CorrpMap.get_figure_enigma(mergedSkeleton)
         # dark figure background
 
@@ -836,10 +857,10 @@ def skeleton_summary(corrpMap):
         mergedSkeleton.fig.suptitle(
             title + f'\n{corrpMap.merged_4d_file}',
             y=0.95, fontsize=20)
-        out_image_loc = re.sub('.nii.gz', name_out_png,
+        out_image_loc = re.sub('.nii.gz', f'_{name_out_png}.png',
                                str(corrpMap.merged_4d_file))
         mergedSkeleton.fig.savefig(out_image_loc, facecolor='black', dpi=200)
-        plt.close(mergedSkeleton.g.fig)
+        plt.close()
 
 
 if __name__ == '__main__':
@@ -1068,7 +1089,7 @@ if __name__ == '__main__':
                                        str(corrpMap.location))
                 print(out_image_loc)
                 corrpMap.fig.savefig(out_image_loc, dpi=200)
-                plt.close(corrpMpa.fig)
+                plt.close()
                 #corrpMap.fig.savefig('/PHShome/kc244/out_image_loc.png', dpi=100)
 
     # skeleton summary parts
