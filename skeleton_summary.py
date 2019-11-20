@@ -29,7 +29,7 @@ class MergedSkeleton:
         self.merged_skeleton_loc = merged_skeleton_loc
         self.merged_skeleton_img = nb.load(str(self.merged_skeleton_loc))
         print(f"Reading {merged_skeleton_loc}")
-        self.merged_skeleton_data = self.merged_skeleton_img.get_data()
+        self.merged_skeleton_data = self.merged_skeleton_img.get_fdata()
 
         # ENIGMA
         self.enigma_dir = Path('/data/pnl/soft/pnlpipe3/tbss/data/enigmaDTI')
