@@ -399,12 +399,10 @@ class CorrpMap(RandomiseRun):
         """Get information of significant voxels"""
 
         # total number of voxels in the skeleton
-        # what if there is zero in skeleton? is it possible?
-        # self.vox_num_total = np.count_nonzero(self.corrp_data)
+        # there could be voxels with 0 in corrp map
+        # p value of 1 --> represented as 0
         self.vox_num_total = np.count_nonzero(self.mask_data)
 
-        print(f'test : threshold {self.threshold}')
-        print(f'test : vox_num_total {self.vox_num_total}')
         # number of significant voxels: greater or equal to 0.95 by default
         self.significant_voxel_num = \
             np.count_nonzero(self.corrp_data > self.threshold)
@@ -416,17 +414,11 @@ class CorrpMap(RandomiseRun):
             * 100
 
         # summary of significant voxels
-        sig_vox_array = self.corrp_data[self.corrp_data >= self.threshold]
+        sig_vox_array = self.corrp_data[self.corrp_data > self.threshold]
         self.significant_voxel_mean = 1 - sig_vox_array.mean()
         self.significant_voxel_std = sig_vox_array.std()
         self.significant_voxel_max = 1 - sig_vox_array.max()
 
-        # print()
-        # print(f'test : file_name {self.location.name}')
-        # print(f'test : threshold {self.threshold}')
-        # print(f'test : vox_num_total {self.vox_num_total}')
-        # print(f'test : significant voxel num {self.significant_voxel_num}')
-        # print(f'test : significant voxel percent {self.significant_voxel_percentage}')
 
     def get_significant_overlap_with_HO(self):
         """Get overlap information of significant voxels with Harvard Oxford
@@ -454,7 +446,7 @@ class CorrpMap(RandomiseRun):
 
                 # get number of significant voxels
                 significant_voxel_side_num = \
-                    np.sum(side_skeleton_array >= self.threshold)
+                    np.sum(side_skeleton_array > self.threshold)
                 setattr(self, f'significant_voxel_{side}_num',
                         significant_voxel_side_num)
 
@@ -464,7 +456,7 @@ class CorrpMap(RandomiseRun):
                 else:
                     setattr(self, f'significant_voxel_{side}_percent',
                             (significant_voxel_side_num /
-                                np.count_nonzero(side_skeleton_array)) * 100)
+                                np.count_nonzero(self.mask_data)) * 100)
         except:
             print('** This study has a specific template. The number of '
                   'significant voxels in the left and right hemisphere '
