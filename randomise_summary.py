@@ -336,9 +336,6 @@ class CorrpMap(RandomiseRun):
         # hemisphere
         self.fsl_dir = Path(environ['FSLDIR'])
         self.fsl_data_dir = self.fsl_dir / 'data'
-        self.HO_dir = self.fsl_data_dir / 'atlases' / 'HarvardOxford'
-        self.HO_sub_thr0_1mm = self.HO_dir / \
-            'HarvardOxford-sub-maxprob-thr0-1mm.nii.gz'
 
         # enigma settings
         self.enigma_dir = Path('/data/pnl/soft/pnlpipe3/tbss/data/enigmaDTI')
@@ -354,7 +351,7 @@ class CorrpMap(RandomiseRun):
             self.mask_img = nb.load(str(self.enigma_skeleton_mask_loc))
             self.mask_data = self.mask_img.get_data()
             self.get_significant_info()
-            self.get_significant_overlap_with_HO()
+            self.get_significant_overlap()
 
         # summary in pandas DataFrame
         self.make_df()
@@ -420,29 +417,22 @@ class CorrpMap(RandomiseRun):
         self.significant_voxel_max = 1 - sig_vox_array.max()
 
 
-    def get_significant_overlap_with_HO(self):
-        """Get overlap information of significant voxels with Harvard Oxford
+    def get_significant_overlap(self):
+        """Get overlap information in each hemisphere
 
-        The Harvard-Oxford template has the left and right hemisphere labels.
-        It estimates a map >= `self.threshold`, then count number of voxels,
-        as well as percentage of significant voxels.
-
-        TODO:
-            - In enigma template, there are voxels that are not included in
-              either labels of the Harvard-Oxford left and right hemispheres.
+        Works for ENIGMA template randomise outputs.
+        - x=90 as the cut off value for the left and right hemisphere
         """
-        HO_data = nb.load(str(self.HO_sub_thr0_1mm)).get_data()
+        right_mask = self.mask_data.copy()
+        right_mask[90:,:,:] = 0
+        left_mask = self.mask_data.copy()
+        left_mask[:90,:,:] = 0
 
-        # Few voxels from ENIGMA template skeleton spreads into the area
-        # defined as a gray matter by Harvard Oxford atlas
         try:
-            for side, label_num in zip(['left', 'right'],
-                                       [[1, 2], [12, 13]]):
+            for side, side_mask in zip(['left', 'right'],
+                                       [left_mask, right_mask]):
                 # get overlaps with each hemisphere
-                side_mask_array = np.where(
-                    (HO_data == label_num[0]) +
-                    (HO_data == label_num[1]), 1, 0)
-                side_skeleton_array = self.corrp_data * side_mask_array
+                side_skeleton_array = self.corrp_data * side_mask
 
                 # get number of significant voxels
                 significant_voxel_side_num = \
@@ -470,7 +460,6 @@ class CorrpMap(RandomiseRun):
                 'file name': [self.name],
                 'Test': self.test_kind,
                 'Modality': self.modality,
-                'Stat num': self.stat_num,
                 'Significance': self.significant,
                 'Sig Max': self.voxel_max_p,
                 'Sig Mean': self.significant_voxel_mean,
@@ -493,7 +482,6 @@ class CorrpMap(RandomiseRun):
                 'file name': [self.name],
                 'Test': self.test_kind,
                 'Modality': self.modality,
-                'Stat num': self.stat_num,
                 'Significance': self.significant,
                 'Sig Max': self.voxel_max_p,
             })
