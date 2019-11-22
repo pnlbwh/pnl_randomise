@@ -350,6 +350,9 @@ class CorrpMap(RandomiseRun):
         # checking significance
         self.check_significance()
         if self.significant:
+            # if significant read in skeleton mask
+            self.mask_img = nb.load(str(self.enigma_skeleton_mask_loc))
+            self.mask_data = self.mask_img.get_data()
             self.get_significant_info()
             self.get_significant_overlap_with_HO()
 
@@ -377,13 +380,13 @@ class CorrpMap(RandomiseRun):
         # max p-value
         self.voxel_max_p = data.max()
 
-        # Discrepancy between numpy and FSL
-        if len(data[(data < 0.95) & (data >= 0.9495)]) != 0:
-            self.threshold = self.threshold - 0.00001
-            print('There are voxels with p value between 0.9495 and 0.05. '
-                  'These numbers are rounded up in FSL to 0.95. Threfore '
-                  'to match to the FSL outputs, changing the threshold to '
-                  '(threshold - 0.00001)')
+        # # Discrepancy between numpy and FSL
+        # if len(data[(data < 0.95) & (data >= 0.9495)]) != 0:
+            # self.threshold = self.threshold - 0.00001
+            # print('There are voxels with p value between 0.9495 and 0.05. '
+                  # 'These numbers are rounded up in FSL to 0.95. Threfore '
+                  # 'to match to the FSL outputs, changing the threshold to '
+                  # '(threshold - 0.00001)')
 
         # any voxels significant?
         if (data >= self.threshold).any():
@@ -394,16 +397,22 @@ class CorrpMap(RandomiseRun):
 
     def get_significant_info(self):
         """Get information of significant voxels"""
-        # total number of voxels in the skeleton
-        self.vox_num_total = np.count_nonzero(self.corrp_data)
 
+        # total number of voxels in the skeleton
+        # what if there is zero in skeleton? is it possible?
+        # self.vox_num_total = np.count_nonzero(self.corrp_data)
+        self.vox_num_total = np.count_nonzero(self.mask_data)
+
+        print(f'test : threshold {self.threshold}')
+        print(f'test : vox_num_total {self.vox_num_total}')
         # number of significant voxels: greater or equal to 0.95 by default
         self.significant_voxel_num = \
-            np.count_nonzero(self.corrp_data >= self.threshold)
+            np.count_nonzero(self.corrp_data > self.threshold)
 
         # number of significant voxels / number of all voxels
+        # (self.significant_voxel_num / np.count_nonzero(self.corrp_data)) \
         self.significant_voxel_percentage = \
-            (self.significant_voxel_num / np.count_nonzero(self.corrp_data)) \
+            (self.significant_voxel_num / self.vox_num_total) \
             * 100
 
         # summary of significant voxels
@@ -411,6 +420,13 @@ class CorrpMap(RandomiseRun):
         self.significant_voxel_mean = 1 - sig_vox_array.mean()
         self.significant_voxel_std = sig_vox_array.std()
         self.significant_voxel_max = 1 - sig_vox_array.max()
+
+        # print()
+        # print(f'test : file_name {self.location.name}')
+        # print(f'test : threshold {self.threshold}')
+        # print(f'test : vox_num_total {self.vox_num_total}')
+        # print(f'test : significant voxel num {self.significant_voxel_num}')
+        # print(f'test : significant voxel percent {self.significant_voxel_percentage}')
 
     def get_significant_overlap_with_HO(self):
         """Get overlap information of significant voxels with Harvard Oxford
@@ -1098,6 +1114,7 @@ if __name__ == '__main__':
     if args.skeleton_summary:
         summarized_merged_maps = []
         for corrpMap in corrp_map_classes:
+            # run skeleton_summary only for the FA
             if corrpMap.modality in ['FA', 'FW']:
                 if hasattr(corrpMap, 'merged_4d_file') and \
                    corrpMap.merged_4d_file not in summarized_merged_maps and \
