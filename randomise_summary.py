@@ -20,7 +20,7 @@ import sys
 
 # utils
 import sys
-sys.path.append('/data/pnl/kcho/PNLBWH/kchopy')
+sys.path.append('/Users/kangik/kchopy')
 from kchopy.kcho_utils import print_df, print_head, search_and_select_one
 from skeleton_summary import MergedSkeleton, SkeletonDir
 
@@ -67,24 +67,25 @@ class RandomiseRun:
     """
     def __init__(self,
                  location='.',
-                 contrast_file='design.con',
-                 matrix_file='design.mat'):
+                 contrast_file=False,
+                 matrix_file=False):
         # define inputs
         self.location = Path(location)
 
         # if matrix_file argument was not given, it would have
         # been set as 'design.mat' --> make it into a full path
-        if matrix_file == 'design.mat':
-            self.matrix_file = self.location / matrix_file
-        else:
+        if matrix_file:
             self.matrix_file = Path(matrix_file)
+            self.get_matrix_info()
+            self.print_matrix_info()
 
         # if contrast_file argument was not given, it would have
         # been set as 'design.con' --> make it into a full path
-        if contrast_file == 'design.con':
-            self.contrast_file = self.location / contrast_file
-        else:
+        if contrast_file:
             self.contrast_file = Path(contrast_file)
+            self.get_contrast_info()
+            self.get_contrast_info_english()
+
 
     def get_contrast_info(self):
         """Read design contrast file into a numpy array
@@ -302,7 +303,8 @@ class CorrpMap(RandomiseRun):
                    default=0.95
     """
 
-    def __init__(self, location, threshold=0.95):
+    def __init__(self, location, threshold=0.95, 
+                 contrast_file=False, matrix_file=False):
         self.location = Path(location)
         self.name = self.location.name
         self.threshold = threshold
@@ -352,6 +354,15 @@ class CorrpMap(RandomiseRun):
             self.mask_data = self.mask_img.get_data()
             self.get_significant_info()
             self.get_significant_overlap()
+
+        # if matrix or contrast file is given
+        if matrix_file:
+            self.get_matrix_info()
+
+        if contrast_file:
+            self.get_contrast_info()
+            self.get_contrast_info_english()
+            self.update_with_contrast()
 
         # summary in pandas DataFrame
         self.make_df()
@@ -870,9 +881,7 @@ if __name__ == '__main__':
 
     argparser.add_argument("--directory", "-d",
                            type=str,
-                           help='Specify randomise out dir. This this option \
-                                 is given, design.mat and design.con within \
-                                 the directory are read by default.',
+                           help='Specify randomise out directory',
                            default=os.getcwd())
 
     argparser.add_argument("--input", "-i",
@@ -939,65 +948,42 @@ if __name__ == '__main__':
 
     args = argparser.parse_args()
 
-    # if separate corrp image is given
+    # Get information from individual corrp files
     if args.input:
-        corrpMaps = [Path(x) for x in args.input]
-        corrp_map_classes = [CorrpMap(x, args.threshold) for x in corrpMaps]
-        if args.matrix and args.contrast:
-            map(lambda x: setattr(x, matrix_file, args.matrix),
-                corrp_map_classes)
-            map(lambda x: setattr(x, 'contrast_file', args.contrast),
-                corrp_map_classes)
-            map(lambda x: x.get_matrix_info(), corrp_map_classes)
-            map(lambda x: x.get_contrast_info(), corrp_map_classes)
-            print('a=>ah')
-            map(lambda x: x.get_contrast_info_english(), corrp_map_classes)
-            # corrp_map_classes[0].print_matrix_info()
-            map(lambda x: x.update_with_contrast(), corrp_map_classes)
-        if args.contrast:
-            map(lambda x: setattr(x, contrast_file, args.contrast), 
-                corrp_map_classes)
-            map(lambda x: x.get_contrast_info(), corrp_map_classes)
-            map(lambda x: x.get_contrast_info_english(), corrp_map_classes)
-            map(lambda x: x.update_with_contrast(), corrp_map_classes)
-
-    # or if randomise image is given
+        corrp_map_locs = args.input
+    # Get a list of corrp files from a randomise directory
     else:
-        if args.contrast and args.matrix:
-            randomiseRun = RandomiseRun(args.directory,
-                                        matrix_file=args.matrix,
-                                        contrast_file=args.contrast)
-        elif args.contrast:
-            randomiseRun = RandomiseRun(args.directory, args.contrast)
-        elif args.matrix:
-            randomiseRun = RandomiseRun(args.directory,
-                                        matrix_file=args.matrix)
-        else:
-            randomiseRun = RandomiseRun(args.directory)
+        # this part reads information from design matrix and contrast
+        randomiseRun = RandomiseRun(args.directory,
+                                    matrix_file=args.matrix,
+                                    contrast_file=args.contrast)
 
-        randomiseRun.get_matrix_info()
-        randomiseRun.print_matrix_info()
-
-        randomiseRun.get_contrast_info()
-        randomiseRun.get_contrast_info_english()
-
+        # load list of corrp files
         if args.f_only:
             randomiseRun.get_corrp_files_glob_string('*corrp_f*.nii.gz')
         else:
             randomiseRun.get_corrp_files()
 
-        corrpMaps = randomiseRun.corrp_ps
-        corrp_map_classes = [CorrpMap(x, args.threshold) for x in corrpMaps]
+        corrp_map_locs = randomiseRun.corrp_ps
+    
 
-        # TODO : WHY DOES NOT MAP WORK in updating 'df' attribute within a class
-        #map(lambda x: setattr(x, df, x.update_with_contrast()), corrp_map_classes)
-        for corrpMap in corrp_map_classes:
-            corrpMap.matrix_file = randomiseRun.matrix_file
-            corrpMap.matrix_df = randomiseRun.matrix_df
-            corrpMap.group_cols = randomiseRun.group_cols
-            corrpMap.contrast_array = randomiseRun.contrast_array
-            corrpMap.contrast_lines = randomiseRun.contrast_lines
-            corrpMap.update_with_contrast()
+    corrp_map_classes = []
+    for corrp_map_loc in corrp_map_locs:
+        corrpMap = CorrpMap(corrp_map_loc, 
+                            threshold=args.threshold,
+                            contrast_file=args.contrast,
+                            matrix_file=args.matrix)
+        corrp_map_classes.append(corrpMap)
+
+        # # TODO : WHY DOES NOT MAP WORK in updating 'df' attribute within a class
+        # #map(lambda x: setattr(x, df, x.update_with_contrast()), corrp_map_classes)
+        # for corrpMap in corrp_map_classes:
+            # corrpMap.matrix_file = randomiseRun.matrix_file
+            # corrpMap.matrix_df = randomiseRun.matrix_df
+            # corrpMap.group_cols = randomiseRun.group_cols
+            # corrpMap.contrast_array = randomiseRun.contrast_array
+            # corrpMap.contrast_lines = randomiseRun.contrast_lines
+            # corrpMap.update_with_contrast()
 
     # get merged image files
     if not args.merged_img_dir:
