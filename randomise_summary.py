@@ -1,5 +1,7 @@
 #!/data/pnl/kcho/anaconda3/bin/python
 
+print('Importing modules')
+
 from pathlib import Path
 import tempfile
 
@@ -21,17 +23,21 @@ import sys
 # utils
 import sys
 sys.path.append('/Users/kangik/kchopy')
+sys.path.append('/data/pnl/kcho/PNLBWH/kchopy')
 from kchopy.kcho_utils import print_df, print_head, search_and_select_one
 from skeleton_summary import MergedSkeleton, SkeletonDir
 
 mpl.use('Agg')
 pd.set_option('mode.chained_assignment', None)
 
+print('Importing modules complete')
+
 '''
 TODO:
     - `-i` and without `-i` to use similar flow.
     - Test
     - Save summary outputs in pdf, csv or excel?
+    - save output to pdf
     - TODO add "interaction" information
     - Move useful functions to kcho_utils.
     - Parallelize
@@ -74,17 +80,16 @@ class RandomiseRun:
 
         # if matrix_file argument was not given, it would have
         # been set as 'design.mat' --> make it into a full path
-        if matrix_file:
-            self.matrix_file = Path(matrix_file)
-            self.get_matrix_info()
-            self.print_matrix_info()
+        # if matrix_file:
+            # self.matrix_file = Path(matrix_file)
+            # self.get_matrix_info()
 
         # if contrast_file argument was not given, it would have
         # been set as 'design.con' --> make it into a full path
-        if contrast_file:
-            self.contrast_file = Path(contrast_file)
-            self.get_contrast_info()
-            self.get_contrast_info_english()
+        # if contrast_file:
+            # self.contrast_file = Path(contrast_file)
+            # self.get_contrast_info()
+            # self.get_contrast_info_english()
 
 
     def get_contrast_info(self):
@@ -159,8 +164,6 @@ class RandomiseRun:
                 else:
                     text = f'Negatively correlated with col {col_num+1}'
                 self.contrast_lines.append(text)
-
-        print(self.contrast_lines)
 
     def get_matrix_info(self):
         """Read design matrix file into a numpy array and summarize
@@ -278,12 +281,15 @@ class RandomiseRun:
 
     def print_matrix_info(self):
         print_head('Matrix summary')
-        print(self.location)
-        print(self.location / self.contrast_file)
-        print(self.location / self.matrix_file)
-        print(f'total number of data point : {len(self.matrix_df)}')
-        print(f'Group columns are : ' + ', '.join(self.group_cols))
-        print_df(self.matrix_info)
+        print(f'Contrast file : {self.contrast_file}')
+        print(f'Matrix file : {self.matrix_file}')
+        print()
+        if hasattr(self, 'matrix_df'):
+            print(f'total number of data point : {len(self.matrix_df)}')
+        if hasattr(self, 'group_cols'):
+            print(f'Group columns are : ' + ', '.join(self.group_cols))
+        if hasattr(self, 'matrix_info'):
+            print_df(self.matrix_info)
 
 
 class CorrpMap(RandomiseRun):
@@ -308,6 +314,20 @@ class CorrpMap(RandomiseRun):
         self.location = Path(location)
         self.name = self.location.name
         self.threshold = threshold
+        self.contrast_file = contrast_file
+        self.matrix_file = matrix_file
+
+        if not Path(self.contrast_file).is_file():
+            self.contrast_file = search_and_select_one(
+                    'contrast_file',
+                    self.location.parent,
+                    ['*.con', 'contrast*'], depth=1)
+
+        if not Path(self.matrix_file).is_file():
+            self.matrix_file = search_and_select_one(
+                    'matrix_file',
+                    self.location.parent,
+                    ['*.mat', 'matrix*'], depth=1)
 
         # Modality
         # modality must be included in its name
@@ -355,11 +375,14 @@ class CorrpMap(RandomiseRun):
             self.get_significant_info()
             self.get_significant_overlap()
 
+        # summary in pandas DataFrame
+        self.make_df()
+
         # if matrix or contrast file is given
-        if matrix_file:
+        if self.matrix_file != 'missing':
             self.get_matrix_info()
 
-        if contrast_file:
+        if self.contrast_file != 'missing':
             self.get_contrast_info()
             self.get_contrast_info_english()
             self.update_with_contrast()
@@ -830,6 +853,9 @@ def skeleton_summary(corrpMap):
     # enigma settingr
     mergedSkeleton.enigma_fa_loc = corrpMap.enigma_fa_loc
     mergedSkeleton.enigma_skeleton_mask_loc = corrpMap.enigma_skeleton_mask_loc
+    mergedSkeleton.mask_data = nb.load(
+            str(mergedSkeleton.enigma_skeleton_mask_loc)).get_data() == 1
+
     mergedSkeleton.data_shape = corrpMap.data_shape
     mergedSkeleton.threshold = 0.01
 
@@ -856,7 +882,13 @@ def skeleton_summary(corrpMap):
         mergedSkeleton.corrp_data = map_data
         mergedSkeleton.type = name_out_png
         plt.style.use('dark_background')
-        mergedSkeleton.vmin = map_data[map_data != 0].min()
+
+        # try:
+        # print(name_out_png)
+        mergedSkeleton.vmin = map_data[mergedSkeleton.mask_data].min()
+        # print(f'vmin for merged skeleton: {mergedSkeleton.vmin}')
+        # except:
+            # pass
         mergedSkeleton.vmax = vmax
         CorrpMap.get_figure_enigma(mergedSkeleton)
         # dark figure background
@@ -897,10 +929,12 @@ if __name__ == '__main__':
 
     argparser.add_argument("--contrast", "-c",
                            type=str,
+                           default='design.con',
                            help='Contrast file used for the randomise.')
 
     argparser.add_argument("--matrix", "-m",
                            type=str,
+                           default='design.mat',
                            help='Matrix file used for the randomise')
 
     argparser.add_argument("--template", "-template",
@@ -965,25 +999,19 @@ if __name__ == '__main__':
             randomiseRun.get_corrp_files()
 
         corrp_map_locs = randomiseRun.corrp_ps
-    
 
     corrp_map_classes = []
+    print_head('Summarizing information for files below')
     for corrp_map_loc in corrp_map_locs:
-        corrpMap = CorrpMap(corrp_map_loc, 
+        print(f'\t{corrp_map_loc}')
+        corrpMap = CorrpMap(corrp_map_loc,
                             threshold=args.threshold,
                             contrast_file=args.contrast,
                             matrix_file=args.matrix)
         corrp_map_classes.append(corrpMap)
 
-        # # TODO : WHY DOES NOT MAP WORK in updating 'df' attribute within a class
-        # #map(lambda x: setattr(x, df, x.update_with_contrast()), corrp_map_classes)
-        # for corrpMap in corrp_map_classes:
-            # corrpMap.matrix_file = randomiseRun.matrix_file
-            # corrpMap.matrix_df = randomiseRun.matrix_df
-            # corrpMap.group_cols = randomiseRun.group_cols
-            # corrpMap.contrast_array = randomiseRun.contrast_array
-            # corrpMap.contrast_lines = randomiseRun.contrast_lines
-            # corrpMap.update_with_contrast()
+    # print matrix information
+    corrpMap.print_matrix_info()
 
     # get merged image files
     if not args.merged_img_dir:
@@ -1078,10 +1106,14 @@ if __name__ == '__main__':
 
     # skeleton summary parts
     if args.skeleton_summary:
+        print_head('Running skeleton summary')
         summarized_merged_maps = []
         for corrpMap in corrp_map_classes:
+            if not hasattr(corrpMap, 'matrix_df'):
+                print('Please provide correct design.mat and design.con')
+                break
             # run skeleton_summary only for the FA
-            if corrpMap.modality in ['FA', 'FW']:
+            elif corrpMap.modality in ['FA', 'FW']:
                 if hasattr(corrpMap, 'merged_4d_file') and \
                    corrpMap.merged_4d_file not in summarized_merged_maps and \
                    corrpMap.merged_4d_file != 'missing':
