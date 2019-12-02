@@ -1,7 +1,10 @@
+#!/data/pnl/kcho/anaconda3/bin/python
+
 import nibabel as nb
 from pathlib import Path
 import numpy as np
 import pandas as pd
+import argparse
 
 """
 This script is used to compare the order of 3d skeletons in the merged 4d
@@ -97,3 +100,35 @@ class MergedData:
         assert self.caselist == self.estimated_subject_order, 'Caselists do not match'
 
 
+if __name__ == '__main__':
+    argparser = argparse.ArgumentParser(
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description='''\
+        Check order of skeletons in the merged 4d skeleton file
+        ''', epilog="Kevin Cho 1st of December, 2019")
+
+    argparser.add_argument("--skeleton_dir", "-sd",
+                           type=str,
+                           help='Skeleton directory')
+
+    argparser.add_argument("--merged_data", "-md",
+                           type=str,
+                           help='Merged 4d data location')
+
+    argparser.add_argument("--caselist", "-c",
+                           type=str,
+                           help='csv caselist location')
+    args = argparser.parse_args()
+
+    if args.skeleton_dir and args.merged_data:
+        skeletonDir = SkeletonDir(args.skeleton_dir)
+        mergedData = MergedData(args.merged_data, args.caselist)
+
+        mergedData.get_order_in_skeleton(skeletonDir)
+        print(mergedData.df)
+        print(mergedData.assert_caselist())
+        print(f'Skeletons in the nifti {args.merged_data} is in the same '
+              f'order as in the {args.caselist} - matched using '
+              f'the file naming conventions in {args.skeleton_dir}')
+    else:
+        print('Give --skeleton_dir and --merged_data')
