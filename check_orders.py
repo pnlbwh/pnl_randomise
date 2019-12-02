@@ -118,10 +118,20 @@ if __name__ == '__main__':
     argparser.add_argument("--caselist", "-c",
                            type=str,
                            help='csv caselist location')
+
+    argparser.add_argument("--modality", "-m",
+                           type=str,
+                           default='FA',
+                           help='Modality in check - used to split the name '
+                                'of the skeleton files to get subject id')
     args = argparser.parse_args()
 
     if args.skeleton_dir and args.merged_data:
-        skeletonDir = SkeletonDir(args.skeleton_dir)
+        if args.modality:
+            skeletonDir = SkeletonDir(args.skeleton_dir,
+                                      split_by='_'+args.modality)
+        else:
+            skeletonDir = SkeletonDir(args.skeleton_dir)
         mergedData = MergedData(args.merged_data, args.caselist)
 
         mergedData.get_order_in_skeleton(skeletonDir)
