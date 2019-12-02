@@ -42,6 +42,7 @@ TODO:
     - Move useful functions to kcho_utils.
     - Parallelize
     - design mat and design con search function
+    - split out RandomiseRun module
 '''
 
 
@@ -274,7 +275,8 @@ class RandomiseRun:
         """
         corrp_ps = list(self.location.glob('*corrp*.nii.gz'))
         # remove corrp files that are produced in the parallel randomise
-        self.corrp_ps = [str(x) for x in corrp_ps if 'SEED' not in x.name]
+        self.corrp_ps = [str(x) for x in corrp_ps 
+                if 'SEED' not in x.name and 'filled' not in x.name]
 
         if len(self.corrp_ps) == 0:
             print(f'There is no corrected p-maps in {self.location}')
@@ -450,6 +452,9 @@ class CorrpMap(RandomiseRun):
         self.significant_voxel_std = sig_vox_array.std()
         self.significant_voxel_max = 1 - sig_vox_array.max()
 
+        # test print
+        # for var in ['vox_num_total', 'significant_voxel_num']:
+            # print(f'{var} {getattr(self, var)}')
 
     def get_significant_overlap(self):
         """Get overlap information in each hemisphere
@@ -811,6 +816,7 @@ class CorrpMap(RandomiseRun):
                 {self.location} \
                 {self.threshold} \
                 {self.enigma_fa_loc} {outfile}'
+        print(command)
         os.popen(command).read()
 
 
@@ -1074,9 +1080,16 @@ if __name__ == '__main__':
                     print_head(f'Estimating tbss_fill for {corrpMap.location}')
 
                     # run tbss_fill
-                    tbss_fill_out = tempfile.NamedTemporaryFile(suffix='.nii.gz')
-                    corrpMap.tbss_fill(tbss_fill_out.name)
-                    corrpMap.corrp_data_filled = nb.load(tbss_fill_out.name).get_data()
+                    tbss_fill_out = re.sub(
+                            '.nii.gz',
+                            '_filled.nii.gz',
+                            str(corrpMap.location))
+
+                    # tbss_fill_out = tempfile.NamedTemporaryFile(suffix='.nii.gz')
+                    # corrpMap.tbss_fill(tbss_fill_out.name)
+                    corrpMap.tbss_fill(tbss_fill_out)
+                    # corrpMap.corrp_data_filled = nb.load(tbss_fill_out.name).get_data()
+                    corrpMap.corrp_data_filled = nb.load(tbss_fill_out).get_data()
 
                 if args.template == 'enigma':
                     corrpMap.get_figure_enigma()

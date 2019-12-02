@@ -136,7 +136,7 @@ if __name__ == '__main__':
 
         mergedData.get_order_in_skeleton(skeletonDir)
         print(mergedData.df)
-        print(mergedData.assert_caselist())
+        mergedData.assert_caselist()
         print(f'Skeletons in the nifti {args.merged_data} is in the same '
               f'order as in the {args.caselist} - matched using '
               f'the file naming conventions in {args.skeleton_dir}')
