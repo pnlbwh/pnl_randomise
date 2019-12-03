@@ -829,11 +829,7 @@ class CorrpMap(RandomiseRun):
 
 
 def skeleton_summary(corrpMap):
-    """Make summary from corrpMap, using its merged_skeleton
-
-    TODO:
-        - make it run only once for each merged skeleton file
-    """
+    """ Make summary from corrpMap, using its merged_skeleton"""
     mergedSkeleton = MergedSkeleton(str(corrpMap.merged_4d_file))
     mergedSkeleton.skeleton_level_summary()
     mergedSkeleton.subject_level_summary()

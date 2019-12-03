@@ -159,14 +159,17 @@ fi
 # This is because randomise within the randomise_parallel does not 
 # take advantage of having multiple threads assigned to them.
 
+echo DIRNAME ${DIRNAME}
+echo BASENAME ${BASENAME}
+
 # kcho_bsub_shell_lines is required because -t must have numbering in its name
 # in order to control stage_2 from executing
 /data/pnl/kcho/PNL_kcho/kcho_bsub_shell_lines.py \
     -i ${DIRNAME}/${BASENAME}.generate \
     -q medium \
     -t ${DIRNAME}_${BASENAME}_randParall \
-    -e ${lsf_out_dir}/${DIRNAME}-${BASENAME}-%J-%I.err \
-    -o ${lsf_out_dir}/${DIRNAME}-${BASENAME}-%J-%I.out
+    -e ${lsf_out_dir}/${BASENAME}-${DIRNAME}-%J-%I.err \
+    -o ${lsf_out_dir}/${BASENAME}-${DIRNAME}-%J-%I.out
 
 #stage2:
 cat <<combineScript > ${DIRNAME}/${BASENAME}.defragment
