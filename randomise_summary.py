@@ -333,10 +333,18 @@ class CorrpMap(RandomiseRun):
 
         # Modality
         # modality must be included in its name
+        self.modality_full_list = ['FW', 'FA', 'FAt', 'FAc', 'FAk'
+                                   'MK', 'MKc', 'MKk',
+                                   'MD', 'MDt',
+                                   'RD', 'RDt',
+                                   'AD', 'ADt']
         try:
             self.modality = re.search(
                 r'.*(FW|FA|MD|RD|AD|MD|FAt|'
                 r'FAc|FAk|MK|MKc|MKk|MDt|RDt|ADt|MDt)_',
+                self.location.name).group(1)
+            self.modality = re.search(
+                '.*(' + '|'.join(self.modality_full_list) + ')_',
                 self.location.name).group(1)
         except AttributeError:
             print_head(f'No modality is detected in the file: {self.name}\n'
@@ -1128,14 +1136,25 @@ if __name__ == '__main__':
         summarized_merged_maps = []
         for corrpMap in corrp_map_classes:
             if not hasattr(corrpMap, 'matrix_df'):
-                print('Please provide correct design.mat and design.con')
-                break
-            # run skeleton_summary only for the FA
-            elif corrpMap.modality in ['FA', 'FW']:
-                if hasattr(corrpMap, 'merged_4d_file') and \
-                   corrpMap.merged_4d_file not in summarized_merged_maps and \
-                   corrpMap.merged_4d_file != 'missing':
-                    print_head("Summarizing merged 4d file:"
-                               f"{corrpMap.merged_4d_file}")
-                    skeleton_summary(corrpMap)
-                    summarized_merged_maps.append(corrpMap.merged_4d_file)
+                print('Please provide correct design matrix. The file is '
+                      'required to read in the group infromation.')
+                pass
+
+            elif corrpMap.modality == 'unknown':
+                print(f'The modality for {corrpMap.location} is unknown to the'
+                      'current version of randomise_summary. Please check '
+                      'the modality is in the list below.')
+                print('  ' + ' '.join(corrpMap.modality_full_list))
+
+            elif corrpMap.merged_4d_file == 'missing':
+                print(f'Merged 4d file for {corrpMap.location} is missing. '
+                      f'Please check there are all_{corrpMap.modality}'
+                      '_skeleton.nii.gz in the same directory.')
+
+            elif hasattr(corrpMap, 'merged_4d_file') and \
+                    corrpMap.merged_4d_file not in summarized_merged_maps and \
+                    corrpMap.merged_4d_file != 'missing':
+                print_head("Summarizing merged 4d file:"
+                           f"{corrpMap.merged_4d_file}")
+                skeleton_summary(corrpMap)
+                summarized_merged_maps.append(corrpMap.merged_4d_file)
