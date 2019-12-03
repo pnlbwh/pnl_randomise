@@ -11,6 +11,10 @@ import seaborn as sns
 
 # stats
 from scipy.stats import pearsonr
+import sys
+sys.path.append('/data/pnl/kcho/PNLBWH/devel/kchopy/kchopy/kchostats')
+import partial_correlation_rpy
+
 
 class ValuesExtracted:
     """Values extracted"""
@@ -46,6 +50,7 @@ class ValuesExtracted:
 
     def get_corr_map(self):
         self.corr_map = self.all_df_int_float.corr()
+
 
     def get_stats(self):
         p_dict = {}
@@ -87,13 +92,23 @@ class ValuesExtracted:
             p_dict[sig_col] = []
             r_dict[sig_col] = []
             for other_col in self.all_df_int_float.columns:
-                if other_col not in self.sig_cols:
-                    df_clean = tmp_df[[sig_col, other_col]].dropna()
-                    r, p = pearsonr(df_clean[sig_col], df_clean[other_col])
-                    p_dict[sig_col].append(p)
-                    r_dict[sig_col].append(r)
-                    if other_col not in variables:
-                        variables.append(other_col)
+                try:
+                    if other_col not in self.sig_cols:
+                        df_clean = tmp_df[[sig_col, other_col]].dropna()
+                        # r, p = pearsonr(df_clean[sig_col], df_clean[other_col])
+                        pcor_out_df = partial_correlation_rpy.pcor(
+                            df_clean[sig_col], df_clean[other_col],
+                            df_clean['Pat_age'])
+                        print(pcor_out_df)
+                        r = pcor_out_df['estimate']
+                        p = pcor_out_df['p']
+
+                        p_dict[sig_col].append(p)
+                        r_dict[sig_col].append(r)
+                        if other_col not in variables:
+                            variables.append(other_col)
+                except ValueError:
+                    pass
 
         self.p_df = pd.DataFrame(
             p_dict,

@@ -1035,7 +1035,7 @@ if __name__ == '__main__':
 
         # if any of corrp map had significant voxels
         out_csv_name = 'values_extracted_for_all_subjects.csv'
-        out_csv = f'{randomiseRun.location}/{out_csv_name}'
+        out_csv = f'{corrpMap.location}/{out_csv_name}'
         try:
             values_df = pd.concat([values_df,
                                    randomiseRun.matrix_df],

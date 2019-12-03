@@ -18,7 +18,8 @@ import seaborn as sns
 # stats
 from itertools import combinations
 import scipy.stats as ss
-
+import sys
+sys.path.append('/data/pnl/kcho/PNLBWH/kchopy')
 from kchopy.kcho_utils import print_head
 from kchostats.ancova import anova, ttest
 
@@ -89,15 +90,58 @@ class MergedSkeleton:
         """
         # Non-zero mean values in each subject skeleton
         self.subject_nonzero_means = []
+        self.subject_nonzero_means_left = []
+        self.subject_nonzero_means_right = []
         self.subject_nonzero_stds = []
+
         # loop through each subject array
         for vol_num in np.arange(self.merged_skeleton_data.shape[-1]):
             vol_data = self.merged_skeleton_data[:, :, :, vol_num]
+            left_vol_data = self.merged_skeleton_data[90:, :, :, vol_num]
+            right_vol_data = self.merged_skeleton_data[:90, :, :, vol_num]
+
             non_zero_mean = vol_data[np.nonzero(vol_data)].mean()
+            non_zero_mean_left = left_vol_data[np.nonzero(left_vol_data)].mean()
+            non_zero_mean_right = right_vol_data[np.nonzero(right_vol_data)].mean()
             non_zero_std = vol_data[np.nonzero(vol_data)].std()
+
             self.subject_nonzero_means.append(non_zero_mean)
+            self.subject_nonzero_means_left.append(non_zero_mean_left)
+            self.subject_nonzero_means_right.append(non_zero_mean_right)
             self.subject_nonzero_stds.append(non_zero_std)
 
+    def subject_level_summary_with_mask(self, mask, threshold):
+        """Summarize subject skeletons
+
+        Attributes:
+            subject_nonzero_means: list, mean of non-zero skeleton
+            subject_nonzero_stds: list, std of non-zero skeleton
+        """
+
+        mask_data = nb.load(mask).get_data()
+        mask_data = np.where(mask_data > threshold, 1, 0)
+
+        # Non-zero mean values in each subject skeleton
+        self.subject_masked_means = []
+        self.subject_masked_means_left = []
+        self.subject_masked_means_right = []
+        self.subject_masked_stds = []
+
+        # loop through each subject array
+        for vol_num in np.arange(self.merged_skeleton_data.shape[-1]):
+            vol_data = self.merged_skeleton_data[:, :, :, vol_num] * mask_data
+            left_vol_data = vol_data[90:, :, :]
+            right_vol_data = vol_data[:90, :, :]
+
+            non_zero_mean = vol_data[np.nonzero(vol_data)].mean()
+            non_zero_mean_left = left_vol_data[np.nonzero(left_vol_data)].mean()
+            non_zero_mean_right = right_vol_data[np.nonzero(right_vol_data)].mean()
+            non_zero_std = vol_data[np.nonzero(vol_data)].std()
+
+            self.subject_masked_means.append(non_zero_mean)
+            self.subject_masked_means_left.append(non_zero_mean_left)
+            self.subject_masked_means_right.append(non_zero_mean_right)
+            self.subject_masked_stds.append(non_zero_std)
 
 class SkeletonDir:
     """TBSS skeleton directory object"""
