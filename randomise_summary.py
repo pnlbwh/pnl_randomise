@@ -1019,6 +1019,18 @@ if __name__ == '__main__':
     # print matrix information
     corrpMap.print_matrix_info()
 
+    # printing result summary
+    df = pd.concat([x.df for x in corrp_map_classes], sort=False)
+    df = df.sort_values('file name')
+    print_head('Result summary')
+
+    if args.sig_only:
+        print_head('Only showing significant maps')
+        df_sig = df.groupby('Significance').get_group(True)
+        print_df(df_sig.set_index(df_sig.columns[0]))
+    else:
+        print_df(df.set_index(df.columns[0]))
+
     # get merged image files
     if not args.merged_img_dir:
         args.merged_img_dir = args.directory
@@ -1035,13 +1047,18 @@ if __name__ == '__main__':
 
         # if any of corrp map had significant voxels
         out_csv_name = 'values_extracted_for_all_subjects.csv'
-        out_csv = f'{corrpMap.location}/{out_csv_name}'
+
+        out_csv = f'{corrpMap.location.parent}/{out_csv_name}'
+        print('Average value for the significant cluster for each subject '
+              f'will be saved in {out_csv}')
+
         try:
             values_df = pd.concat([values_df,
                                    randomiseRun.matrix_df],
                                   axis=1)
             values_df.to_csv(out_csv)
             print(f'{out_csv} is created.')
+
         # if none of corrp map had significant voxels
         except:
             values_df.to_csv(out_csv)
@@ -1049,18 +1066,6 @@ if __name__ == '__main__':
 
         values_df.index = [f'subject {x+1}' for x in values_df.index]
         print_df(values_df)
-
-    # printing result summary
-    df = pd.concat([x.df for x in corrp_map_classes], sort=False)
-    df = df.sort_values('file name')
-    print_head('Result summary')
-
-    if args.sig_only:
-        print_head('Only showing significant maps')
-        df_sig = df.groupby('Significance').get_group(True)
-        print_df(df_sig.set_index(df_sig.columns[0]))
-    else:
-        print_df(df.set_index(df.columns[0]))
 
     # If atlas query option is on
     if args.atlasquery:
