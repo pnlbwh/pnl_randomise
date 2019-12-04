@@ -18,22 +18,19 @@ import re
 import numpy as np
 from os import environ
 import os
-import sys
 
 # utils
-import sys
-sys.path.append('/Users/kangik/kchopy')
-sys.path.append('/data/pnl/kcho/PNLBWH/kchopy')
-from kchopy.kcho_utils import print_df, print_head, search_and_select_one
+from randomise_utils import print_df, print_head, search_and_select_one
 from skeleton_summary import MergedSkeleton, SkeletonDir
 
+print('Importing modules complete')
 mpl.use('Agg')
 pd.set_option('mode.chained_assignment', None)
 
-print('Importing modules complete')
 
 '''
 TODO:
+    - kchoutils into a 
     - `-i` and without `-i` to use similar flow.
     - Test
     - Save summary outputs in pdf, csv or excel?
@@ -917,14 +914,23 @@ def skeleton_summary(corrpMap):
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        description='''\
-        randomise_summary.py --dir /example/randomise/output/dir/
+        description='''
+The most simple way to use the script is
+  cd stats
+  ls
+    all_FA_skeleton.nii.gz
+    tbss_FA_tfce_corrp_tstat1.nii.gz
+    tbss_FA_tfce_corrp_tstat2.nii.gz
+    design.mat
+    design.con
+  randomise_summary.py
         ''', epilog="Kevin Cho Thursday, August 22, 2019")
 
-    argparser.add_argument("--directory", "-d",
-                           type=str,
-                           help='Specify randomise out directory',
-                           default=os.getcwd())
+    argparser.add_argument(
+        "--directory", "-d",
+        type=str,
+        help='Specify randomise out directory.',
+        default=os.getcwd())
 
     argparser.add_argument("--input", "-i",
                            type=str,
@@ -995,7 +1001,9 @@ if __name__ == '__main__':
     # Get information from individual corrp files
     if args.input:
         corrp_map_locs = args.input
-    # Get a list of corrp files from a randomise directory
+
+    # If args.input is not given, get a list of corrp files from the given 
+    # randomise directory
     else:
         # this part reads information from design matrix and contrast
         randomiseRun = RandomiseRun(args.directory,
