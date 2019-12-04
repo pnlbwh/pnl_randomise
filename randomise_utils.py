@@ -21,6 +21,9 @@ def print_df(df):
     print(tabulate(df, headers='keys', tablefmt='psql'))
     print()
 
+def print_warning(warning):
+    print_head('Warning')
+    print(warning)
 
 def search_and_select_one(name: str, location: str,
                           list_of_patterns: list, depth=1):

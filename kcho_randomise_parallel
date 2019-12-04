@@ -97,7 +97,9 @@ ROOTNAME=`echo $RANDOMISE_OUTPUT | awk '{print $3}'`
 BASENAME=`basename $ROOTNAME`
 DIRNAME=`dirname $ROOTNAME`
 
-mkdir -p ${DIRNAME}/${BASENAME}_logs
+# commented out - this directory is used by fsl_sub
+# which is not used in bsub
+#mkdir -p ${DIRNAME}/${BASENAME}_logs
 
 PERMS_PER_SLOT=`echo $RANDOMISE_OUTPUT | awk '{print $4}'`
 if [ x${REQUESTED_TIME} = 'x' ] ; then
@@ -158,9 +160,6 @@ fi
 # Submit multiple bsubs rather than submitting single bsub
 # This is because randomise within the randomise_parallel does not 
 # take advantage of having multiple threads assigned to them.
-
-echo DIRNAME ${DIRNAME}
-echo BASENAME ${BASENAME}
 
 # kcho_bsub_shell_lines is required because -t must have numbering in its name
 # in order to control stage_2 from executing

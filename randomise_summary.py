@@ -20,17 +20,20 @@ from os import environ
 import os
 
 # utils
-from randomise_utils import print_df, print_head, search_and_select_one
+from randomise_utils import print_head, print_warning, print_df
+from randomise_utils import search_and_select_one
+
 from skeleton_summary import MergedSkeleton, SkeletonDir
 
 print('Importing modules complete')
+
 mpl.use('Agg')
 pd.set_option('mode.chained_assignment', None)
 
 
 '''
 TODO:
-    - kchoutils into a 
+    - why import take so long?
     - `-i` and without `-i` to use similar flow.
     - Test
     - Save summary outputs in pdf, csv or excel?
@@ -911,6 +914,21 @@ def skeleton_summary(corrpMap):
         plt.close()
 
 
+def check_corrp_map_locations(corrp_map_classes):
+    """ Make sure all corrpMap are in a same directory """
+    corrpMap_locations = list(
+        set([x.location.parent for x in corrp_map_classes]))
+    if len(corrpMap_locations) != 1:
+        print_warning(
+            'Input Corrp Maps are located in different directories. This '
+            'may lead to randomise_summary.py catching a wrong merged 4d '
+            'data for data summary. Please consider running separate '
+            'randomise_summary.py runs for each corrp map or moving them '
+            'into a single directory before running randomise_summary.py'
+            )
+    else:
+        pass
+
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -1015,11 +1033,11 @@ The most simple way to use the script is
             randomiseRun.get_corrp_files_glob_string('*corrp_f*.nii.gz')
         else:
             randomiseRun.get_corrp_files()
-
         corrp_map_locs = randomiseRun.corrp_ps
 
-    corrp_map_classes = []
+    # get corrpMap information
     print_head('Summarizing information for files below')
+    corrp_map_classes = []
     for corrp_map_loc in corrp_map_locs:
         print(f'\t{corrp_map_loc}')
         corrpMap = CorrpMap(corrp_map_loc,
@@ -1035,7 +1053,6 @@ The most simple way to use the script is
     df = pd.concat([x.df for x in corrp_map_classes], sort=False)
     df = df.sort_values('file name')
     print_head('Result summary')
-
     if args.sig_only:
         print_head('Only showing significant maps')
         df_sig = df.groupby('Significance').get_group(True)
@@ -1043,43 +1060,7 @@ The most simple way to use the script is
     else:
         print_df(df.set_index(df.columns[0]))
 
-    # get merged image files
-    if not args.merged_img_dir:
-        args.merged_img_dir = args.directory
-
-    # if subject_values option is given
-    if args.subject_values:
-        print_head('Values extracted for each subject')
-        values_df = pd.DataFrame()
-        for corrpMap in corrp_map_classes:
-            if corrpMap.significant:
-                corrpMap.update_with_4d_data()
-                values_df = pd.concat(
-                    [values_df, corrpMap.cluster_averages_df], axis=1)
-
-        # if any of corrp map had significant voxels
-        out_csv_name = 'values_extracted_for_all_subjects.csv'
-
-        out_csv = f'{corrpMap.location.parent}/{out_csv_name}'
-        print('Average value for the significant cluster for each subject '
-              f'will be saved in {out_csv}')
-
-        try:
-            values_df = pd.concat([values_df,
-                                   randomiseRun.matrix_df],
-                                  axis=1)
-            values_df.to_csv(out_csv)
-            print(f'{out_csv} is created.')
-
-        # if none of corrp map had significant voxels
-        except:
-            values_df.to_csv(out_csv)
-            print(f'{out_csv} is created.')
-
-        values_df.index = [f'subject {x+1}' for x in values_df.index]
-        print_df(values_df)
-
-    # If atlas query option is on
+    # if atlas query option is on
     if args.atlasquery:
         print_head('Atlas query of the significant cluster')
         for corrpMap in corrp_map_classes:
@@ -1133,6 +1114,45 @@ The most simple way to use the script is
                 corrpMap.fig.savefig(out_image_loc, dpi=200)
                 plt.close()
                 #corrpMap.fig.savefig('/PHShome/kc244/out_image_loc.png', dpi=100)
+
+    # if merged image location is not given
+    if not args.merged_img_dir:
+        if args.subject_values or args.skeleton_summary:
+            # make sure all the input corrp maps are in the same directory
+            check_corrp_map_locations(corrp_map_classes)
+            args.merged_img_dir = str(corrpMap.location.parent)
+
+    # if subject_values option is given
+    if args.subject_values:
+        print_head('Values extracted for each subject')
+        values_df = pd.DataFrame()
+        for corrpMap in corrp_map_classes:
+            if corrpMap.significant:
+                corrpMap.update_with_4d_data()
+                values_df = pd.concat(
+                    [values_df, corrpMap.cluster_averages_df], axis=1)
+
+        # if any of corrp map had significant voxels
+        out_csv_name = 'values_extracted_for_all_subjects.csv'
+
+        out_csv = f'{corrpMap.location.parent}/{out_csv_name}'
+        print('Average value for the significant cluster for each subject '
+              f'will be saved in {out_csv}')
+
+        try:
+            values_df = pd.concat([values_df,
+                                   randomiseRun.matrix_df],
+                                  axis=1)
+            values_df.to_csv(out_csv)
+            print(f'{out_csv} is created.')
+
+        # if none of corrp map had significant voxels
+        except:
+            values_df.to_csv(out_csv)
+            print(f'{out_csv} is created.')
+
+        values_df.index = [f'subject {x+1}' for x in values_df.index]
+        print_df(values_df)
 
     # skeleton summary parts
     if args.skeleton_summary:
