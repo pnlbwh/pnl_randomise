@@ -1,7 +1,6 @@
 #!/data/pnl/kcho/anaconda3/bin/python
 
 print('Importing modules')
-
 from pathlib import Path
 import tempfile
 
@@ -22,27 +21,28 @@ import os
 # utils
 from randomise_utils import print_head, print_warning, print_df
 from randomise_utils import search_and_select_one
-
 from skeleton_summary import MergedSkeleton, SkeletonDir
+
+# figures
+import sys
+sys.path.append('/data/pnl/kcho/PNLBWH/devel/nifti-snapshot')
+import nifti_snapshot.nifti_snapshot as nifti_snapshot
 
 print('Importing modules complete')
 
 mpl.use('Agg')
 pd.set_option('mode.chained_assignment', None)
 
-
 '''
 TODO:
+    - work with get_figure
+    - left and right hemispher mask to consistent = 1 rather than 0
+    - link nifti_snapshots to it
     - why import take so long?
-    - `-i` and without `-i` to use similar flow.
     - Test
     - Save summary outputs in pdf, csv or excel?
-    - save output to pdf
     - TODO add "interaction" information
-    - Move useful functions to kcho_utils.
-    - Parallelize
     - design mat and design con search function
-    - split out RandomiseRun module
 '''
 
 
@@ -91,7 +91,6 @@ class RandomiseRun:
             # self.contrast_file = Path(contrast_file)
             # self.get_contrast_info()
             # self.get_contrast_info_english()
-
 
     def get_contrast_info(self):
         """Read design contrast file into a numpy array
@@ -275,8 +274,8 @@ class RandomiseRun:
         """
         corrp_ps = list(self.location.glob('*corrp*.nii.gz'))
         # remove corrp files that are produced in the parallel randomise
-        self.corrp_ps = [str(x) for x in corrp_ps 
-                if 'SEED' not in x.name and 'filled' not in x.name]
+        self.corrp_ps = [str(x) for x in corrp_ps
+                         if 'SEED' not in x.name and 'filled' not in x.name]
 
         if len(self.corrp_ps) == 0:
             print(f'There is no corrected p-maps in {self.location}')
@@ -310,8 +309,7 @@ class CorrpMap(RandomiseRun):
         threshold: float, fsl-style (1-p) threhold for significance.
                    default=0.95
     """
-
-    def __init__(self, location, threshold=0.95, 
+    def __init__(self, location, threshold=0.95,
                  contrast_file=False, matrix_file=False):
         self.location = Path(location)
         self.name = self.location.name
@@ -471,9 +469,9 @@ class CorrpMap(RandomiseRun):
         - x=90 as the cut off value for the left and right hemisphere
         """
         right_mask = self.mask_data.copy()
-        right_mask[90:,:,:] = 0
+        right_mask[90:, :, :] = 0
         left_mask = self.mask_data.copy()
-        left_mask[:90,:,:] = 0
+        left_mask[:90, :, :] = 0
 
         try:
             for side, side_mask in zip(['left', 'right'],
@@ -674,6 +672,63 @@ class CorrpMap(RandomiseRun):
         # self.df_query = self.df_query.groupby('atlas').get_group('Labels')
         self.df_query = self.df_query.sort_values('atlas')
 
+    def get_figure(self, **kwargs):
+        """Get corrpMap figure"""
+        self.cbar_title = f'{self.modality} {self.contrast_text}'
+
+        # for tbss fill option
+        if hasattr(self, 'tbss_fill_out'):
+            self.out_image_loc = re.sub(
+                '.nii.gz', '.png', str(self.tbss_fill_out))
+            self.title = f'{self.modality} {self.contrast_text}\n' \
+                         f'{self.tbss_fill_out}'
+            self.tbssFigure = nifti_snapshot.TbssFigure(
+                image_files=[self.tbss_fill_out],
+                output_file=self.out_image_loc,
+                cmap_list=['autumn'],
+                cbar_titles=[self.cbar_title],
+                alpha_list=[1],
+                title=self.title)
+            # below is self.tbssFigure.create_figure_one_map()
+            self.tbssFigure.images_mask_out_the_zero()
+            self.tbssFigure.loop_through_axes_draw_bg()
+            self.tbssFigure.annotate_with_z()
+            self.tbssFigure.loop_through_axes_draw_images()
+            self.tbssFigure.cbar_x = 0.25
+            self.tbssFigure.cbar_width = 0.5
+            self.tbssFigure.add_cbars_horizontal()
+            self.tbssFigure.fig.suptitle(
+                self.tbssFigure.title, y=0.92, fontsize=25)
+            self.tbssFigure.fig.savefig(self.tbssFigure.output_file, dpi=200)
+
+        else:
+            self.out_image_loc = re.sub('.nii.gz', '.png', str(self.location))
+            self.title = f'{self.modality} {self.contrast_text}\n' \
+                         f'{self.location}'
+            self.tbssFigure = nifti_snapshot.TbssFigure(
+                image_files=[str(self.location)],
+                output_file=self.out_image_loc,
+                cmap_list=['autumn'],
+                cbar_titles=[self.cbar_title],
+                alpha_list=[1],
+                cbar_ticks=[0.95, 1],
+                title=self.title)
+
+            # below is self.tbssFigure.create_figure_one_map()
+            self.tbssFigure.images_mask_out_the_zero()
+            self.tbssFigure.images_mask_by_threshold(0.95)
+            self.tbssFigure.loop_through_axes_draw_bg()
+            self.tbssFigure.annotate_with_z()
+            self.tbssFigure.loop_through_axes_draw_images_corrp_map(0.95)
+            self.tbssFigure.cbar_x = 0.25
+            self.tbssFigure.cbar_width = 0.5
+            self.tbssFigure.add_cbars_horizontal()
+
+            self.tbssFigure.fig.suptitle(
+                self.tbssFigure.title, y=0.92, fontsize=25)
+            self.tbssFigure.fig.savefig(self.tbssFigure.output_file, dpi=200)
+
+
     def get_figure_enigma(self, **kwargs):
         """Fig and axes attribute to CorrpMap"""
 
@@ -742,7 +797,7 @@ class CorrpMap(RandomiseRun):
             vmin = self.vmin
         else:
             vmin = self.threshold
-        
+
         if hasattr(self, 'vmax'):
             if self.vmax == 'free':
                 vmax = self.corrp_data.max()
@@ -819,12 +874,12 @@ class CorrpMap(RandomiseRun):
         self.fig = fig
         self.axes = axes
 
-    def tbss_fill(self, outfile):
+    def tbss_fill(self):
         command = f'tbss_fill  \
                 {self.location} \
                 {self.threshold} \
-                {self.enigma_fa_loc} {outfile}'
-        print(command)
+                {self.enigma_fa_loc} {self.tbss_fill_out}'
+        print(re.sub('\s+', ' ', command))
         os.popen(command).read()
 
 
@@ -1076,44 +1131,15 @@ The most simple way to use the script is
                 # tbss_fill if tbss_fill=True
                 if args.tbss_fill:
                     print_head(f'Estimating tbss_fill for {corrpMap.location}')
-
                     # run tbss_fill
-                    tbss_fill_out = re.sub(
-                            '.nii.gz',
-                            '_filled.nii.gz',
-                            str(corrpMap.location))
-
-                    # tbss_fill_out = tempfile.NamedTemporaryFile(suffix='.nii.gz')
-                    # corrpMap.tbss_fill(tbss_fill_out.name)
-                    corrpMap.tbss_fill(tbss_fill_out)
-                    # corrpMap.corrp_data_filled = nb.load(tbss_fill_out.name).get_data()
-                    corrpMap.corrp_data_filled = nb.load(tbss_fill_out).get_data()
-
-                if args.template == 'enigma':
-                    corrpMap.get_figure_enigma()
+                    corrpMap.tbss_fill_out = re.sub(
+                        '.nii.gz', '_filled.nii.gz',
+                        str(corrpMap.location))
+                    corrpMap.tbss_fill()
+                    corrpMap.get_figure()
                 else:
-                    corrpMap.get_figure_enigma(mean_fa=args.template)
-
-                # title
-                try:
-                    corrpMap.fig.suptitle(
-                        f'{corrpMap.modality} {corrpMap.contrast_text}\n'
-                        f'{corrpMap.location}',
-                        y=0.95,
-                        fontsize=20)
-                except:
-                    corrpMap.fig.suptitle(
-                        f'{corrpMap.modality}\n'
-                        f'{corrpMap.location}',
-                        y=0.95,
-                        fontsize=20)
-
-                out_image_loc = re.sub('.nii.gz', '.png',
-                                       str(corrpMap.location))
-                print(out_image_loc)
-                corrpMap.fig.savefig(out_image_loc, dpi=200)
+                    corrpMap.get_figure()
                 plt.close()
-                #corrpMap.fig.savefig('/PHShome/kc244/out_image_loc.png', dpi=100)
 
     # if merged image location is not given
     if not args.merged_img_dir:
@@ -1165,8 +1191,8 @@ The most simple way to use the script is
                 pass
 
             elif corrpMap.modality == 'unknown':
-                print(f'The modality for {corrpMap.location} is unknown to the'
-                      'current version of randomise_summary. Please check '
+                print(f'The modality for {corrpMap.location} is unknown to '
+                      'the current version of randomise_summary. Please check '
                       'the modality is in the list below.')
                 print('  ' + ' '.join(corrpMap.modality_full_list))
 
@@ -1182,3 +1208,18 @@ The most simple way to use the script is
                            f"{corrpMap.merged_4d_file}")
                 skeleton_summary(corrpMap)
                 summarized_merged_maps.append(corrpMap.merged_4d_file)
+                print()
+
+        # # If overlap option is on
+        # if args.overlap and len(args.input) == 2:
+            # tbssFigure = nifti_snapshot.TbssFigure(
+                # image_files=args.input,
+                # output_file=args.output_file,
+                # cmap_list=args.cmap,
+                # overlap_cmap=args.overlap_cmap,
+                # cbar_titles=args.cbar_title,
+                # alpha_list=[1, 1]+[args.overlap_alpha],
+                # title=args.title)
+
+            # tbssFigure.create_figure_two_maps_and_overlap()
+
