@@ -85,6 +85,8 @@ if [ $# -le 3 ] ; then
   exit 1
 fi
 
+# set FSLDIR for the cluster to make it the script work without sourcing bash rc files
+FSLDIR=/data/pnl/soft/pnlpipe3/fsl
 RANDOMISE_OUTPUT=`$FSLDIR/bin/randomise $@ -Q`
 if [ $? != 0 ] ; then 
   echo "ERROR: Randomise could not succesfully initialise with the command line given. Submission aborted."
