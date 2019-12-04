@@ -266,5 +266,5 @@ done
     -w  "${ended_lines}" \
     -J randParall_part2 \
     -n 1 \
-    -e ${lsf_out_dir}/${DIRNAME}-${BASENAME}-%J-%I.err \
-    -o ${lsf_out_dir}/${DIRNAME}-${BASENAME}-%J-%I.out < ${DIRNAME}/${BASENAME}.defragment 
+    -e ${lsf_out_dir}/${BASENAME}-${DIRNAME}-%J-%I.err \
+    -o ${lsf_out_dir}/${BASENAME}-${DIRNAME}-%J-%I.out < ${DIRNAME}/${BASENAME}.defragment 
