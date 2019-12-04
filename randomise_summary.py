@@ -1110,8 +1110,12 @@ The most simple way to use the script is
     print_head('Result summary')
     if args.sig_only:
         print_head('Only showing significant maps')
-        df_sig = df.groupby('Significance').get_group(True)
-        print_df(df_sig.set_index(df_sig.columns[0]))
+        try:
+            df_sig = df.groupby('Significance').get_group(True)
+            print_df(df_sig.set_index(df_sig.columns[0]))
+        except KeyError:
+            print('There is no significant corrp map. Please return withtout '
+                  'the -so option')
     else:
         print_df(df.set_index(df.columns[0]))
 
