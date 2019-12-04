@@ -163,14 +163,47 @@ fi
 
 # kcho_bsub_shell_lines is required because -t must have numbering in its name
 # in order to control stage_2 from executing
-/data/pnl/kcho/PNL_kcho/kcho_bsub_shell_lines.py \
-    -i ${DIRNAME}/${BASENAME}.generate \
-    -q medium \
-    -t ${DIRNAME}_${BASENAME}_randParall \
-    -e ${lsf_out_dir}/${BASENAME}-${DIRNAME}-%J-%I.err \
-    -o ${lsf_out_dir}/${BASENAME}-${DIRNAME}-%J-%I.out
+#/data/pnl/kcho/PNL_kcho/kcho_bsub_shell_lines.py \
+    #-i ${DIRNAME}/${BASENAME}.generate \
+    #-q medium \
+    #-t ${DIRNAME}_${BASENAME}_randParall \
+    #-e ${lsf_out_dir}/${BASENAME}-${DIRNAME}-%J-%I.err \
+    #-o ${lsf_out_dir}/${BASENAME}-${DIRNAME}-%J-%I.out
 
-#stage2:
+
+# function to get job id
+# https://stackoverflow.com/questions/12094035/lsf-get-id-of-submitted-job
+#IFS=$'\n'
+#function nk_jobid {
+    #output=$($*)
+    #echo $output | head -n1 | cut -d'<' -f2 | cut -d'>' -f1
+#}
+#for i in `cat ${DIRNAME}/${BASENAME}.generate`
+#do
+    #jobid=$(nk_jobid bsub -q medium  -J ${title}  -e ${lsf_out_dir}/${BASENAME}-${DIRNAME}-%J-%I.err -o ${lsf_out_dir}/${BASENAME}-${DIRNAME}-%J-%I.out ${command})
+    #echo ${jobid}
+#done
+
+# bash replacement of kcho_bsub_shell_lines python script
+IFS=$'\n'
+submitted_titles=''
+for i in `cat ${DIRNAME}/${BASENAME}.generate | awk -v OFS='\t' '{print NR, $0}'`
+do
+    num=`echo ${i} | cut -f1`
+    command=`echo ${i} | cut -f2`
+    title=${DIRNAME}_${BASENAME}_randParall_${num}
+
+    bsub \
+        -q medium \
+        -J ${title} \
+        -e ${lsf_out_dir}/${BASENAME}-${DIRNAME}-%J-%I.err \
+        -o ${lsf_out_dir}/${BASENAME}-${DIRNAME}-%J-%I.out \
+        ${command}
+
+    submitted_titles=`echo ${submitted_titles} ${title}`
+done
+
+#stage 2:
 cat <<combineScript > ${DIRNAME}/${BASENAME}.defragment
 #!/bin/sh
 echo "Merging stat images"
@@ -251,15 +284,16 @@ total_number_of_seed=`expr ${total_number_of_seed} - 1`
 # create `ended_lines` variable which contains the name of ended jobs
 # eg) ended(/data/pnl/kcho/Lupus/TBSS/Tashrif/tbss/prac_parallel/tbss_FA_randParall_0) && ended(/data/pnl/kcho/Lupus/TBSS/Tashrif/tbss/prac_parallel/tbss_FA_randParall_1) && ...
 # below line is needed to start the dependency test with 'ended(...'
-ended_lines=`echo ended\(${DIRNAME}_${BASENAME}_randParall_0\)` 
-for num in `seq  1 ${total_number_of_seed}`
+ended_lines=`echo ended\(${DIRNAME}_${BASENAME}_randParall_1\)` 
+for num in `seq  2 ${total_number_of_seed}`
 do
-    echo ${num}
     ended_lines=`echo ${ended_lines} \&\& ended\(${DIRNAME}_${BASENAME}_randParall_${num}\)`
 done
 
+#echo ${ended_lines}
 # run part 2
 # TODO : this part is very light - could be moved to running in shell without bsub
+echo Submitting part 2 for merging files to bsub
 /hptc_cluster/lsf/8.0/linux2.6-glibc2.3-x86_64/bin/bsub \
     -q medium \
     -w  "${ended_lines}" \
