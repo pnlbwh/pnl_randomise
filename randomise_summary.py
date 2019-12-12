@@ -7,6 +7,7 @@ import tempfile
 # figures
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import seaborn as sns
 from scipy import ndimage
 
 # Imaging
@@ -21,7 +22,7 @@ import os
 # utils
 from randomise_utils import print_head, print_warning, print_df
 from randomise_utils import search_and_select_one
-from skeleton_summary import MergedSkeleton, SkeletonDir
+from skeleton_summary import MergedSkeleton, SkeletonDir, SkeletonDirSig
 
 # figures
 import sys
@@ -231,7 +232,8 @@ class RandomiseRun:
                            if self.matrix_df[x].isin([0, 1]).all()]
 
         if 'col 0' not in min_0_max_1_col:
-            print("Group Column is not in the first column")
+            print("Contrast file does not have 1s in the first column "
+                  "- likely be correlation or interaction")
             print("Setting self.group_cols=['no group col']")
             self.group_cols = ['no group col']
 
@@ -351,7 +353,7 @@ class CorrpMap(RandomiseRun):
 
         # Merged skeleton file
         # find merged skeleton file
-        merged_skel_pattern = [f'*all*_{self.modality}[_.]*nii.gz',
+        merged_skel_pattern = [f'*all*_{self.modality}[_.]*skel*nii.gz',
                                f'*{self.modality}*merged*.nii.gz']
         self.merged_4d_file = search_and_select_one(
             'merged_skeleton',
@@ -888,13 +890,18 @@ def skeleton_summary(corrpMap):
     mergedSkeleton = MergedSkeleton(str(corrpMap.merged_4d_file))
     mergedSkeleton.skeleton_level_summary()
     mergedSkeleton.subject_level_summary()
+
+    # set modality of the merged skeleton file
     mergedSkeleton.modality = corrpMap.modality
 
-    # corrpMap.get_matrix_info()
+    # get a list of groups
+    # TODO: here might be changed into actual group names
     group_list = corrpMap.matrix_df[corrpMap.group_cols].astype(
         'int').to_string(header=False, index=False).split('\n')
 
-    # group list
+    # create a dataframe that has
+    # - mean of values in the non zero skeleton for each subject
+    # - standard deviation of values in the nonzero skeleton for each subject
     mergedSkeleton.df = pd.DataFrame({
         'subject': corrpMap.matrix_df.index,
         'mean': mergedSkeleton.subject_nonzero_means,
@@ -902,11 +909,14 @@ def skeleton_summary(corrpMap):
         'group': group_list
         })
 
-    # Whole skeleton average for each subjects for each group
-    print('Creating figures')
+    print('Creating figures to summarize information from the skeletons')
+
+    # Figure that shows
+    # - skeleton group average as ahline
+    # - skeleton subject average as scatter dots
+    # - tests between subject averages between groups
     plt.style.use('default')
     SkeletonDir.get_group_figure(mergedSkeleton)
-    # plt.style.use('seaborn')
     out_image_loc = re.sub('.nii.gz',
                            '_skeleton_average_for_all_subjects.png',
                            str(corrpMap.merged_4d_file))
@@ -914,20 +924,31 @@ def skeleton_summary(corrpMap):
     plt.close()
     print('\t- Average for the skeleton in each subjects')
 
-    # skeleton summary figures
-    # enigma settingr
-    mergedSkeleton.enigma_fa_loc = corrpMap.enigma_fa_loc
-    mergedSkeleton.enigma_skeleton_mask_loc = corrpMap.enigma_skeleton_mask_loc
-    mergedSkeleton.mask_data = nb.load(
-            str(mergedSkeleton.enigma_skeleton_mask_loc)).get_data() == 1
-
     mergedSkeleton.data_shape = corrpMap.data_shape
     mergedSkeleton.threshold = 0.01
 
+    # Figure that shows
+    # - skeleton alteration map
+    #   - 1 where all subject has the skeleton
+    #   - 0 where not all subject has the skeleton
     # enlarge the alteration map
     mergedSkeleton.skeleton_alteration_map = ndimage.binary_dilation(
             mergedSkeleton.skeleton_alteration_map,
             iterations=7).astype(mergedSkeleton.skeleton_alteration_map.dtype)
+
+    # mean of the skeleton across the subject
+    # out_image_loc = re.sub(
+        # '.nii.gz', f'_average_across_subjects.png',
+        # str(corrpMap.merged_4d_file))
+    # meanSkeletonFigure = nifti_snapshot.TbssFigure(
+        # image_files=[mergedSkeleton.merged_skeleton_mean_map],
+        # output_file=out_image_loc,
+        # cmap_list=['autumn'],
+        # cbar_titles=[
+            # f'Average {mergedSkeleton.modality} map across all subjects'],
+        # alpha_list=[1],
+        # title=f'Average {mergedSkeleton.modality} map across all subjects')
+    # meanSkeletonFigure.images_mask_out_the_skeleton()
 
     # plot average map through `get_figure_enigma` function
     # TODO SPLIT below back again
@@ -983,6 +1004,7 @@ def check_corrp_map_locations(corrp_map_classes):
             )
     else:
         pass
+
 
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser(
@@ -1156,12 +1178,46 @@ The most simple way to use the script is
     if args.subject_values:
         print_head('Values extracted for each subject')
         values_df = pd.DataFrame()
+        modal_ms_dict = {}
+        all_modalities = [x.modality for x in corrp_map_classes
+                          if x.significant]
+        print(all_modalities)
         for corrpMap in corrp_map_classes:
             if corrpMap.significant:
-                corrpMap.update_with_4d_data()
-                values_df = pd.concat(
-                    [values_df, corrpMap.cluster_averages_df], axis=1)
+                if corrpMap.modality in modal_ms_dict.keys():
+                    mergedSkeleton = modal_ms_dict[corrpMap.modality]
+                    mergedSkeleton.update_with_corrpMap(corrpMap)
+                else:
+                    mergedSkeleton = MergedSkeleton(corrpMap.merged_4d_file)
+                    mergedSkeleton.update_with_corrpMap(corrpMap)
 
+                    # if there is a need to save mergedSkeleton
+                    if len([x for x in all_modalities
+                            if x == corrpMap.modality]) > 2:
+                        modal_ms_dict[corrpMap.modality] = mergedSkeleton
+
+                values_df = pd.concat(
+                    [values_df, mergedSkeleton.cluster_averages_df],
+                    axis=1)
+
+                # cluster average figure
+                plt.style.use('default')
+                SkeletonDirSig.get_group_figure(mergedSkeleton)
+                mergedSkeleton.g.ax.set_title(
+                    f'Average {corrpMap.modality} in the significant cluster '
+                    'for all subjects\n'
+                    f'({corrpMap.location} > {corrpMap.threshold})',
+                    fontweight='bold')
+                mergedSkeleton.g.ax.set_ylabel(
+                    f'{corrpMap.modality} in the significant cluster')
+                out_image_loc = re.sub(
+                    '.nii.gz', '_sig_average_for_all_subjects.png',
+                    str(corrpMap.location))
+                mergedSkeleton.g.savefig(out_image_loc,
+                                         facecolor='white', dpi=200)
+                print(out_image_loc)
+                plt.close()
+        
         # if any of corrp map had significant voxels
         out_csv_name = 'values_extracted_for_all_subjects.csv'
 
@@ -1175,6 +1231,7 @@ The most simple way to use the script is
                                   axis=1)
             values_df.to_csv(out_csv)
             print(f'{out_csv} is created.')
+
 
         # if none of corrp map had significant voxels
         except:

@@ -17,34 +17,73 @@ import seaborn as sns
 
 # stats
 from itertools import combinations
-import scipy.stats as ss
-import sys
-sys.path.append('/data/pnl/kcho/PNLBWH/kchopy')
-from kchopy.kcho_utils import print_head
-from kchostats.ancova import anova, ttest
+from stats import anova, ttest
+
 
 class MergedSkeleton:
     """TBSS all_modality_skeleton map object"""
-    def __init__(self, merged_skeleton_loc):
+    def __init__(self, merged_skeleton_loc, template='enigma'):
         """Read in merged skeleton nifti file"""
         self.merged_skeleton_loc = merged_skeleton_loc
         self.merged_skeleton_img = nb.load(str(self.merged_skeleton_loc))
         print(f"Reading {merged_skeleton_loc}")
         self.merged_skeleton_data = self.merged_skeleton_img.get_fdata()
 
+        # data shape
+        # self.data_shape = self.
+
         # ENIGMA
         self.enigma_dir = Path('/data/pnl/soft/pnlpipe3/tbss/data/enigmaDTI')
         self.enigma_fa_loc = self.enigma_dir / 'ENIGMA_DTI_FA.nii.gz'
         self.enigma_skeleton_mask_loc = self.enigma_dir / \
             'ENIGMA_DTI_FA_skeleton_mask.nii.gz'
+        self.mask_data = nb.load(
+            str(self.enigma_skeleton_mask_loc)).get_data() == 1
 
         # binarize merged skeleton map
-        self.merged_skeleton_data_bin = np.where(
-            self.merged_skeleton_data == 0, 0, 1)
         self.merged_skeleton_data_bin_sum = np.sum(
-            self.merged_skeleton_data_bin, axis=3)
+            np.where(self.merged_skeleton_data == 0, 0, 1),
+            axis=3)
         self.merged_skeleton_data_bin_mean = np.mean(
-            self.merged_skeleton_data_bin, axis=3)
+            np.where(self.merged_skeleton_data == 0, 0, 1),
+            axis=3)
+
+    def update_with_corrpMap(self, corrpMap):
+        self.mask_data = ''
+        self.merged_skeleton_data_bin_sum = ''
+        self.merged_skeleton_data_bin_mean = ''
+
+        # get a map with significant voxels
+        self.modality = corrpMap.modality
+        significant_cluster_data = np.where(
+            corrpMap.corrp_data >= corrpMap.threshold, 1, 0)
+            
+        self.sig_mask = significant_cluster_data
+        self.cluster_averages = {}
+        # Get average of values in the `significant_cluster_data` map
+        # for each skeleton volume
+        for vol_num in np.arange(self.merged_skeleton_data.shape[3]):
+            vol_data = self.merged_skeleton_data[:, :, :, vol_num]
+            average = vol_data[significant_cluster_data == 1].mean()
+            self.cluster_averages[vol_num] = average
+
+        self.cluster_averages_df = pd.DataFrame.from_dict(
+            self.cluster_averages,
+            orient='index',
+            columns=[f'{corrpMap.modality} values in the significant '
+                     f'cluster {corrpMap.name}']
+        )
+
+        group_list = corrpMap.matrix_df[corrpMap.group_cols].astype(
+            'int').to_string(header=False, index=False).split('\n')
+
+        self.df = pd.DataFrame({
+            'subject': corrpMap.matrix_df.index,
+            'mean': list(self.cluster_averages.values()),
+            'group': group_list
+            })
+
+        # self.merged_skeleton_img.uncache()
 
     def skeleton_level_summary(self):
         """Summarize all skeleton
@@ -183,6 +222,12 @@ class SkeletonDir:
         self.df = pd.merge(self.df, demo_df, on=merge_on, how='left')
 
     def get_group_figure(self):
+        """Group average figure of skeleton
+
+        - skeleton group average as ahline
+        - skeleton subject average as ahline
+        - tests between subject averages between groups
+        """
 
         self.g = sns.catplot(
                 x='group',
@@ -265,3 +310,35 @@ class SkeletonDir:
                        f'{f_val:.2f}, P = {p:.2f}'
             self.g.ax.text(1, height, text,
                            transform=self.g.ax.transAxes)
+
+
+class SkeletonDirSig(SkeletonDir):
+    """TBSS skeleton directory object with significant region"""
+
+    def summary(self):
+        """Summarize skeleton"""
+        # list of all skeleton nifti files in numpy arrays
+        arrays = [nb.load(str(x)).get_data() for x in self.skeleton_files]
+
+        # merge skeleton files
+        self.merged_skeleton_data = np.stack(arrays, axis=3)
+        self.mask_4d = np.broadcast_to(
+            self.sig_mask,
+            self.merged_skeleton_data.shape)
+
+        self.means = [x[self.mask == 1].mean() for x in arrays]
+        self.df['mean'] = self.means
+
+        self.stds = [x[self.mask == 1].std() for x in arrays]
+        self.df['std'] = self.stds
+
+        self.mean = self.merged_skeleton_data[
+            self.mask_4d == 1].mean()
+        self.std = self.merged_skeleton_data[
+            self.mask_4d == 1].std()
+
+        self.merged_data_df = pd.DataFrame({
+            'merged mean': [self.mean],
+            'merged std': [self.std]
+        })
+
