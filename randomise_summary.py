@@ -256,10 +256,33 @@ class RandomiseRun:
             # 'unique' and 'count' columns of group columns
             for group_num, col in enumerate(self.group_cols, 1):
                 # unique values as an extra row
-                self.matrix_info.loc['unique', col] = f"Group {group_num}"
+                self.matrix_info.loc['column info', col] = f"Group {group_num}"
                 # count of each unique value as an extra row
                 self.matrix_info.loc['count', col] = \
                     (self.matrix_df[col] == 1).sum()
+
+            # wide to long
+            df_tmp = self.matrix_df.copy()
+            for num, row in df_tmp.iterrows():
+                for group_num, group_col in enumerate(self.group_cols, 1):
+                    if row[group_col] == 1:
+                        df_tmp.loc[num, 'group'] = f'Group {group_num}'
+                
+            # # non-group column
+            self.covar_info_dict = {}
+            for col in self.matrix_info.columns:
+                if col not in self.group_cols:
+                    unique_values = self.matrix_df[col].unique()
+                    if len(unique_values) < 5:
+                        count_df_tmp = df_tmp.groupby(['group', col]).count()
+                        count_df_tmp = count_df_tmp[['col 0']]
+                        count_df_tmp.columns = ['Count']
+                        self.covar_info_dict[col] = \
+                            count_df_tmp.reset_index().set_index('group')
+                    else:
+                        self.covar_info_dict[col] = \
+                            df_tmp.groupby('group').describe()[col]
+
 
     def get_corrp_files_glob_string(self, glob_string):
         """Find corrp files and return a list of Path objects
@@ -323,13 +346,13 @@ class CorrpMap(RandomiseRun):
             self.contrast_file = search_and_select_one(
                     'contrast_file',
                     self.location.parent,
-                    ['*.con', 'contrast*'], depth=1)
+                    ['*.con', 'contrast*'], depth=0)
 
         if not Path(self.matrix_file).is_file():
             self.matrix_file = search_and_select_one(
                     'matrix_file',
                     self.location.parent,
-                    ['*.mat', 'matrix*'], depth=1)
+                    ['*.mat', 'matrix*'], depth=0)
 
         # Modality
         # modality must be included in its name
@@ -358,7 +381,7 @@ class CorrpMap(RandomiseRun):
         self.merged_4d_file = search_and_select_one(
             'merged_skeleton',
             self.location.parent,
-            merged_skel_pattern)
+            merged_skel_pattern, depth=0)
 
         # information from the file name
         self.test_kind = re.search(r'(\w)stat\d+.nii.gz', self.name).group(1)
@@ -398,7 +421,7 @@ class CorrpMap(RandomiseRun):
             self.update_with_contrast()
 
         # summary in pandas DataFrame
-        self.make_df()
+        # self.make_df()
 
     def check_significance(self):
         """Any voxels with greater value than self.threshold
@@ -1058,6 +1081,10 @@ The most simple way to use the script is
                            help='Print average in the significant cluster for \
                            all subjects')
 
+    argparser.add_argument("--cov_info", "-ci",
+                           action='store_true',
+                           help='Print covariate information for each group')
+
     argparser.add_argument("--sig_only", "-so",
                            action='store_true',
                            help='Print only the significant statistics')
@@ -1123,8 +1150,21 @@ The most simple way to use the script is
                             matrix_file=args.matrix)
         corrp_map_classes.append(corrpMap)
 
+    # if no corrpMap is defined
+    try:
+        corrpMap
+    except NameError:
+        sys.exit('Please check there is corrp file')
+
     # print matrix information
     corrpMap.print_matrix_info()
+    if args.cov_info and hasattr(corrpMap, 'covar_info_dict'):
+        print_head('Covariate summary')
+        for col, table in corrpMap.covar_info_dict.items():
+            print(col)
+            print_df(table)
+
+
 
     # printing result summary
     df = pd.concat([x.df for x in corrp_map_classes], sort=False)
