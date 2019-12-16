@@ -132,6 +132,7 @@ class MergedSkeleton:
         self.subject_nonzero_means_left = []
         self.subject_nonzero_means_right = []
         self.subject_nonzero_stds = []
+        self.subject_nonzero_voxel_count = []
 
         # loop through each subject array
         for vol_num in np.arange(self.merged_skeleton_data.shape[-1]):
@@ -143,11 +144,14 @@ class MergedSkeleton:
             non_zero_mean_left = left_vol_data[np.nonzero(left_vol_data)].mean()
             non_zero_mean_right = right_vol_data[np.nonzero(right_vol_data)].mean()
             non_zero_std = vol_data[np.nonzero(vol_data)].std()
+            non_zero_voxel_count = len(np.where(vol_data==0)[0])
 
             self.subject_nonzero_means.append(non_zero_mean)
             self.subject_nonzero_means_left.append(non_zero_mean_left)
             self.subject_nonzero_means_right.append(non_zero_mean_right)
             self.subject_nonzero_stds.append(non_zero_std)
+            self.subject_nonzero_voxel_count.append(non_zero_voxel_count)
+
 
     def subject_level_summary_with_mask(self, mask, threshold):
         """Summarize subject skeletons
