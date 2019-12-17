@@ -1,0 +1,221 @@
+{% extends "layout.html" %}
+
+{% block username %}
+{{ user }}
+{% endblock %}
+
+{% block navbar %}
+    <li class="active"><a href="#">hos</a></li>
+    <li><a href="#">Link</a></li>
+{% endblock %}
+
+{% block subtitle %}
+<h4>- Data location : {{ location }}</h4>
+<h4>- Owner of the files :
+    {% for creater in owners %}
+        {{ creater }}
+    {% endfor %}
+</h4>
+<h4>- Corrected p maps were created on :
+    {% for datec in datecs %}
+        {{ datec }}
+    {% endfor %}
+</h4>
+
+{% endblock %}
+
+
+{% block matrixsummary %}
+    <h2>Matrix summary</h2>
+    <h4>Matrix file : {{ mat_location }}
+    <h4>Total number of subjects : {{ total_number_of_subjects }}
+    <br><br>
+    <div class="table-responsive">
+    {{ mat_table|safe }}
+    </div>
+{% endblock %}
+
+{% block contrastsummary %}
+    <h2>Contrast summary</h2>
+    <h4>Contrast file : {{ con_location }}
+    <br><br>
+    <div class="table-responsive">
+    {{ con_table|safe }}
+    </div>
+{% endblock %}
+
+{% block outputsummary %}
+    <h2>Output corrected p-map summary</h2>
+    <div class="table-responsive">
+    {{ table|safe }}
+    </div>
+{% endblock %}
+
+
+{% block corrpmapsummary %}
+    <h2>Significant cluster figures</h2>
+    <h4>For bigger figure, please click on the figure</h4>
+    <div class="row">
+      <div class="col-md-12">
+        <div id="mdb-lightbox-ui"></div>
+        <div class="mdb-lightbox no-margin">
+         {% for corrpMap in corrpMaps %}
+            {% if corrpMap.significant %}
+              <figure class="col-md-4">
+                <a class="black-text" href={{ corrpMap.out_image_loc }} data-size="1600x1067">
+                  <img alt="picture" src={{ corrpMap.out_image_loc }} class="img-thumbnail">
+                  <h3 class="text-center my-3">{{ corrpMap.modality }} {{ corrpMap.contrast_text }}</h3>
+                </a>
+              </figure>
+             {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <h2>Significant cluster figures - Mean value in the significant cluster for each group</h2>
+    <div class="row">
+      <div class="col-md-12">
+        <div id="mdb-lightbox-ui"></div>
+        <div class="mdb-lightbox no-margin">
+         {% for corrpMap in corrpMaps %}
+            {% if corrpMap.significant %}
+              <figure class="col-md-4">
+                <a class="black-text" href={{ corrpMap.sig_out_image_loc }} data-size="1600x1067">
+                  <img alt="picture" src={{ corrpMap.sig_out_image_loc }} class="img-thumbnail">
+                  <h3 class="text-center my-3">{{ corrpMap.modality }} {{ corrpMap.contrast_text }}</h3>
+                </a>
+              </figure>
+             {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+{% endblock %}
+
+<hr>
+
+{% block skeletonsummary %}
+    <h2>Skeleton summary Figures</h2>
+    <h4>For bigger figure, please click on the figure</h4>
+    <h3>Skeleton average</h3>
+    <div class="row">
+      <div class="col-md-12">
+        <div id="mdb-lightbox-ui"></div>
+        <div class="mdb-lightbox no-margin">
+         {% for modality, skeleton_average_figure in average_figures.items() %}
+             <figure class="col-md-4">
+               <a class="black-text" href={{ skeleton_average_figure }} data-size="1600x1067">
+                 <img alt="picture" src={{ skeleton_average_figure }} class="img-thumbnail">
+                 <h3 class="text-center my-3">{{ modality }} skeleton</h3>
+               </a>
+             </figure>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-md-12">
+        <div id="mdb-lightbox-ui"></div>
+        <div class="mdb-lightbox no-margin">
+         {% for modality, skeleton_average_figure in skeleton_average_figures.items() %}
+             <figure class="col-md-4">
+               <a class="black-text" href={{ skeleton_average_figure }} data-size="1600x1067">
+                 <img alt="picture" src={{ skeleton_average_figure }} class="img-thumbnail">
+                 <h3 class="text-center my-3">{{ modality }} skeleton</h3>
+               </a>
+             </figure>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <h3>Standard deviation in skeletons across subjects</h3>
+    <div class="row">
+      <div class="col-md-12">
+        <div id="mdb-lightbox-ui"></div>
+        <div class="mdb-lightbox no-margin">
+         {% for modality, skeleton_average_figure in std_figures.items() %}
+             <figure class="col-md-4">
+               <a class="black-text" href={{ skeleton_average_figure }} data-size="1600x1067">
+                 <img alt="picture" src={{ skeleton_average_figure }} class="img-thumbnail">
+                 <h3 class="text-center my-3">{{ modality }} skeleton</h3>
+               </a>
+             </figure>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <h3>Sum of binarized skeletons across subjects</h3>
+    <div class="row">
+      <div class="col-md-12">
+        <div id="mdb-lightbox-ui"></div>
+        <div class="mdb-lightbox no-margin">
+         {% for modality, skeleton_average_figure in bin_sum_figures.items() %}
+             <figure class="col-md-4">
+               <a class="black-text" href={{ skeleton_average_figure }} data-size="1600x1067">
+                 <img alt="picture" src={{ skeleton_average_figure }} class="img-thumbnail">
+                 <h3 class="text-center my-3">{{ modality }} skeleton</h3>
+               </a>
+             </figure>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <h3>Highlighting difference in the binarized skeletons across subjects</h3>
+    <div class="row">
+      <div class="col-md-12">
+        <div id="mdb-lightbox-ui"></div>
+        <div class="mdb-lightbox no-margin">
+         {% for modality, skeleton_average_figure in bin_sum_diff_figures.items() %}
+             <figure class="col-md-4">
+               <a class="black-text" href={{ skeleton_average_figure }} data-size="1600x1067">
+                 <img alt="picture" src={{ skeleton_average_figure }} class="img-thumbnail">
+                 <h3 class="text-center my-3">{{ modality }} skeleton</h3>
+               </a>
+             </figure>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-12">
+        <div id="mdb-lightbox-ui"></div>
+        <div class="mdb-lightbox no-margin">
+         {% for modality, skeleton_average_figure in skel_vol_figures.items() %}
+             <figure class="col-md-4">
+               <a class="black-text" href={{ skeleton_average_figure }} data-size="1600x1067">
+                 <img alt="picture" src={{ skeleton_average_figure }} class="img-thumbnail">
+                 <h3 class="text-center my-3">{{ modality }} skeleton</h3>
+               </a>
+             </figure>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <h3>Values in the warpped maps for those zero voxels in the skeleton for all subjects</h3>
+    <div class="row">
+      <div class="col-md-12">
+        <div id="mdb-lightbox-ui"></div>
+        <div class="mdb-lightbox no-margin">
+         {% for modality, skeleton_average_figure in warped_map_figures.items() %}
+             <figure class="col-md-4">
+               <a class="black-text" href={{ skeleton_average_figure }} data-size="1600x1067">
+                 <img alt="picture" src={{ skeleton_average_figure }} class="img-thumbnail">
+                 <h3 class="text-center my-3">{{ modality }} skeleton</h3>
+               </a>
+             </figure>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+{% endblock %}
+
+{% block footer %}
+{{super()}}
+{% endblock %}
