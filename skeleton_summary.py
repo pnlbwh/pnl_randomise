@@ -1,3 +1,5 @@
+#!/data/pnl/kcho/anaconda3/bin/python
+
 # nifti
 import nibabel as nb
 
@@ -6,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 # os tools
+import re
 from pathlib import Path
 
 # import print option
@@ -13,7 +16,8 @@ from pathlib import Path
 
 # figure
 import seaborn as sns
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
+import argparse
 
 # stats
 from itertools import combinations
@@ -27,7 +31,7 @@ class MergedSkeleton:
         self.merged_skeleton_loc = merged_skeleton_loc
         self.merged_skeleton_img = nb.load(str(self.merged_skeleton_loc))
         print(f"Reading {merged_skeleton_loc}")
-        self.merged_skeleton_data = self.merged_skeleton_img.get_fdata()
+        self.merged_skeleton_data = self.merged_skeleton_img.get_data()
 
         # data shape
         # self.data_shape = self.
@@ -144,7 +148,7 @@ class MergedSkeleton:
             non_zero_mean_left = left_vol_data[np.nonzero(left_vol_data)].mean()
             non_zero_mean_right = right_vol_data[np.nonzero(right_vol_data)].mean()
             non_zero_std = vol_data[np.nonzero(vol_data)].std()
-            non_zero_voxel_count = len(np.where(vol_data == 0)[0])
+            non_zero_voxel_count = len(np.where(vol_data != 0)[0])
 
             self.subject_nonzero_means.append(non_zero_mean)
             self.subject_nonzero_means_left.append(non_zero_mean_left)
@@ -152,6 +156,31 @@ class MergedSkeleton:
             self.subject_nonzero_stds.append(non_zero_std)
             self.subject_nonzero_voxel_count.append(non_zero_voxel_count)
 
+    def subject_level_summary_with_warp(self, warp_dir, caselist):
+        """Summarize subject skeletons
+
+        Attributes:
+            subject_nonzero_means: list, mean of non-zero skeleton
+            subject_nonzero_stds: list, std of non-zero skeleton
+        """
+        # zero in the skeleton
+        self.subject_zero_skeleton_values = []
+
+        with open(caselist, 'r') as f:
+            cases = [x.strip() for x in f.readlines()]
+        # loop through each subject array
+        for vol_num in np.arange(self.merged_skeleton_data.shape[-1]):
+            vol_data = self.merged_skeleton_data[:, :, :, vol_num]
+            subject_id = cases[vol_num]
+            warp_data_loc = list(Path(warp_dir).glob(f'*{subject_id}*'))[0]
+            warp_data = nb.load(str(warp_data_loc)).get_data()
+            # zero where the mask is not zero
+            zero_in_the_skeleton_coord = np.where(
+                (self.mask_data == 1) & (vol_data == 0)
+                )
+
+            self.subject_zero_skeleton_values.append(
+                    warp_data[zero_in_the_skeleton_coord])
 
     def subject_level_summary_with_mask(self, mask, threshold):
         """Summarize subject skeletons
@@ -181,7 +210,7 @@ class MergedSkeleton:
             non_zero_mean_left = left_vol_data[np.nonzero(left_vol_data)].mean()
             non_zero_mean_right = right_vol_data[np.nonzero(right_vol_data)].mean()
             non_zero_std = vol_data[np.nonzero(vol_data)].std()
-            non_zero_voxel_count = len(np.where(vol_data == 0)[0])
+            non_zero_voxel_count = len(np.where(vol_data != 0)[0])
 
             self.subject_masked_means.append(non_zero_mean)
             self.subject_masked_means_left.append(non_zero_mean_left)
@@ -318,6 +347,95 @@ class SkeletonDir:
             self.g.ax.text(1, height, text,
                            transform=self.g.ax.transAxes)
 
+    def get_subject_skeleton_volume_figure(self):
+        """Subject skeleton volume figure """
+
+        self.g_skel_vol = sns.catplot(
+                x='subject',
+                y='skeleton_volume',
+                data=self.df)
+
+        self.g_skel_vol.fig.set_size_inches(8, 4)
+        self.g_skel_vol.fig.set_dpi(150)
+        self.g_skel_vol.ax.set_ylabel(f'{self.modality} skeleton volume')
+
+        if len(self.df) > 100:
+            for tick in self.g_skel_vol.ax.xaxis.get_major_ticks():
+                tick.label.set_fontsize(8)
+        self.g_skel_vol.ax.set_xlabel('Subject')
+        self.g_skel_vol.ax.set_title(
+            f'Volume of {self.modality} skeleton for all subjects',
+            fontweight='bold')
+
+        # highlight the subject who are off the most common value
+        most_common_volume = self.df['skeleton_volume'].value_counts().idxmax()
+        for index, row in self.df.iterrows():
+            if row.skeleton_volume != most_common_volume:
+                self.g_skel_vol.ax.text(
+                    index,
+                    row.skeleton_volume,
+                    row.subject, ha='center', va='center')
+
+    def get_subject_zero_skeleton_figure(self):
+        """Subject skeleton volume figure """
+        tmp_df = self.df.copy()
+        # tmp_df.at[0, 'zero_skeleton'] = [1,2,3,4]
+        for index, row in tmp_df.iterrows():
+            try:
+                tmp_df.loc[index, 'mean'] = np.mean(row['zero_skeleton'])
+                tmp_df.loc[index, 'min'] = np.min(row['zero_skeleton'])
+                tmp_df.loc[index, 'max'] = np.max(row['zero_skeleton'])
+                tmp_df.loc[index, 'std'] = np.std(row['zero_skeleton'])
+                tmp_df.loc[index, 'count'] = len(row['zero_skeleton'])
+            except:
+                tmp_df.loc[index, 'mean'] = 0
+                tmp_df.loc[index, 'min'] = 0
+                tmp_df.loc[index, 'max'] = 0
+                tmp_df.loc[index, 'std'] = 0
+                tmp_df.loc[index, 'count'] = 0
+
+
+        tmp_df = pd.melt(
+            tmp_df, id_vars='subject',
+            var_name='zero skeleton info',
+            value_vars=['mean', 'min', 'max', 'std', 'count'],
+            value_name='value').reset_index()
+            
+        self.g_skel_zero = sns.catplot(
+                x='subject',
+                y='value',
+                row='zero skeleton info',
+                sharey=False,
+                data=tmp_df)
+
+        self.g_skel_zero.fig.set_size_inches(8, 8)
+        self.g_skel_zero.fig.set_dpi(150)
+        for ax in np.ravel(self.g_skel_zero.axes):
+            var = ax.get_title().split(' = ')[1]
+            ax.set_title('')
+            ax.set_ylabel(var)
+            # ax.set_ylabel(f'{self.modality} zero-skeleton mean')
+            if len(self.df) > 100:
+                for tick in ax.xaxis.get_major_ticks():
+                    tick.label.set_fontsize(8)
+        ax.set_xlabel('Subject')
+
+        self.g_skel_zero.fig.suptitle(
+            f'Summary of values in the warped {self.modality} images\n' 
+            f'at the zero skeleton voxels in the skeletonized '
+            f'{self.modality} map for all subjects',
+            fontweight='bold', y=1.05)
+
+        # # highlight the subject who are off the most common value
+        # most_common_volume = self.df['skeleton_volume'].value_counts().idxmax()
+        # for index, row in self.df.iterrows():
+            # if row.skeleton_volume != most_common_volume:
+                # self.g_skel_zero.ax.text(
+                    # index,
+                    # row.skeleton_volume,
+                    # row.subject, ha='center', va='center')
+
+
 
 class SkeletonDirSig(SkeletonDir):
     """TBSS skeleton directory object with significant region"""
@@ -349,3 +467,103 @@ class SkeletonDirSig(SkeletonDir):
             'merged std': [self.std]
         })
 
+
+def skeleton_summary(merged_4d_file, tbss_all_loc):
+    """ Make summary from corrpMap, using its merged_skeleton"""
+    caselist = str(Path(tbss_all_loc) / 'log/caselist.txt')
+
+    mergedSkeleton = MergedSkeleton(merged_4d_file)
+    mergedSkeleton.skeleton_level_summary()
+    mergedSkeleton.subject_level_summary()
+
+    # set modality of the merged skeleton file
+    mergedSkeleton.modality = Path(merged_4d_file).name.split('_')[1]
+    warp_dir = str(Path(tbss_all_loc) / mergedSkeleton.modality / 'warped')
+
+    # create a dataframe that has
+    # - mean of values in the non zero skeleton for each subject
+    # - standard deviation of values in the nonzero skeleton for each subject
+    print('Creating figures to summarize information from the skeletons')
+    print(f'Using information in {warp_dir} to '
+          'extract values in warped maps')
+
+    with open(caselist, 'r') as f:
+        cases = [x.strip() for x in f.readlines()]
+
+    mergedSkeleton.subject_level_summary_with_warp(warp_dir, caselist)
+    mergedSkeleton.df = pd.DataFrame({
+        'subject': cases,
+        'mean': mergedSkeleton.subject_nonzero_means,
+        'skeleton_volume': mergedSkeleton.subject_nonzero_voxel_count,
+        'skeleton non_zero_std': mergedSkeleton.subject_nonzero_stds,
+        'zero_skeleton': mergedSkeleton.subject_zero_skeleton_values,
+        })
+    SkeletonDir.get_subject_zero_skeleton_figure(mergedSkeleton)
+    out_image_loc = re.sub('.nii.gz',
+                           '_skeleton_zero_mean_in_warp.png',
+                           merged_4d_file)
+
+    mergedSkeleton.g_skel_zero.savefig(
+            out_image_loc,
+            facecolor='white', dpi=200)
+    plt.close()
+
+    # Figure that shows
+    # - skeleton group average as ahline
+    # - skeleton subject average as scatter dots
+    # - tests between subject averages between groups
+    plt.style.use('default')
+    SkeletonDir.get_group_figure(mergedSkeleton)
+    out_image_loc = re.sub('.nii.gz',
+                           '_skeleton_average_for_all_subjects.png',
+                           str(merged_4d_file))
+    mergedSkeleton.g.savefig(out_image_loc, facecolor='white', dpi=200)
+    plt.close()
+    print('\t- Average for the skeleton in each subjects')
+
+    SkeletonDir.get_subject_skeleton_volume_figure(mergedSkeleton)
+    out_image_loc = re.sub('.nii.gz',
+                           '_skeleton_volume_for_all_subjects.png',
+                           str(merged_4d_file))
+    mergedSkeleton.g_skel_vol.savefig(out_image_loc, facecolor='white', dpi=200)
+    plt.close()
+    print('\t- Volume for the skeleton in each subjects')
+
+if __name__ == '__main__':
+    argparser = argparse.ArgumentParser(
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description='''
+The most simple way to use the script is
+  cd stats
+  ls
+    all_FA_skeleton.nii.gz
+    tbss_FA_tfce_corrp_tstat1.nii.gz
+    tbss_FA_tfce_corrp_tstat2.nii.gz
+    design.mat
+    design.con
+  randomise_summary.py
+        ''', epilog="Kevin Cho Thursday, August 22, 2019")
+
+    argparser.add_argument(
+        "--merged_4d_file", "-i",
+        type=str,
+        help='Merged 4d file')
+
+    argparser.add_argument(
+        "--warp_dir", "-w",
+        type=str,
+        help='warp dir')
+
+    argparser.add_argument(
+        "--caselist", "-c",
+        type=str,
+        help='caselist')
+
+    argparser.add_argument(
+        "--tbss_all_loc", "-tal",
+        type=str,
+        help='tbss_all location')
+
+    args = argparser.parse_args()
+
+    skeleton_summary(args.merged_4d_file, args.tbss_all_loc)
