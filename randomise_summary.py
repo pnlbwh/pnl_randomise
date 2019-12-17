@@ -34,6 +34,8 @@ print('Importing modules complete')
 mpl.use('Agg')
 pd.set_option('mode.chained_assignment', None)
 
+from randomise_summary_web import create_html
+
 '''
 TODO:
     - work with get_figure
@@ -108,6 +110,9 @@ class RandomiseRun:
         last_header_line_number = lines.index(headers[-1]) + 1
         self.contrast_array = np.loadtxt(self.contrast_file,
                                          skiprows=last_header_line_number)
+        self.contrast_df = pd.DataFrame(self.contrast_array)
+        self.contrast_df.columns = [f'col {int(x)+1}' for x in
+                                    self.contrast_df.columns]
 
     def get_contrast_info_english(self):
         """Read design contrast file into a numpy array
@@ -197,7 +202,7 @@ class RandomiseRun:
         # matrix array into pandas dataframe
         self.matrix_df = pd.DataFrame(self.matrix_array)
         # rename columns to have 'col ' in each
-        self.matrix_df.columns = [f'col {x}' for x in
+        self.matrix_df.columns = [f'col {x+1}' for x in
                                   self.matrix_df.columns]
         # summarize matrix
         self.matrix_info = self.matrix_df.describe()
@@ -231,7 +236,7 @@ class RandomiseRun:
         min_0_max_1_col = [x for x in self.matrix_df.columns
                            if self.matrix_df[x].isin([0, 1]).all()]
 
-        if 'col 0' not in min_0_max_1_col:
+        if 'col 1' not in min_0_max_1_col:
             print("Contrast file does not have 1s in the first column "
                   "- likely be correlation or interaction")
             print("Setting self.group_cols=['no group col']")
@@ -275,7 +280,7 @@ class RandomiseRun:
                     unique_values = self.matrix_df[col].unique()
                     if len(unique_values) < 5:
                         count_df_tmp = df_tmp.groupby(['group', col]).count()
-                        count_df_tmp = count_df_tmp[['col 0']]
+                        count_df_tmp = count_df_tmp[['col 1']]
                         count_df_tmp.columns = ['Count']
                         self.covar_info_dict[col] = \
                             count_df_tmp.reset_index().set_index('group')
@@ -335,7 +340,7 @@ class CorrpMap(RandomiseRun):
                    default=0.95
     """
     def __init__(self, location, threshold=0.95,
-                 contrast_file=False, matrix_file=False):
+                 contrast_file=False, matrix_file=False, **kwargs):
         self.location = Path(location)
         self.name = self.location.name
         self.threshold = threshold
@@ -378,10 +383,17 @@ class CorrpMap(RandomiseRun):
         # find merged skeleton file
         merged_skel_pattern = [f'*all*_{self.modality}[_.]*skel*nii.gz',
                                f'*{self.modality}*merged*.nii.gz']
-        self.merged_4d_file = search_and_select_one(
-            'merged_skeleton',
-            self.location.parent,
-            merged_skel_pattern, depth=0)
+
+        if 'merged_img_dir' in kwargs:
+            self.merged_4d_file = search_and_select_one(
+                'merged_skeleton',
+                kwargs.get('merged_img_dir'),
+                merged_skel_pattern, depth=0)
+        else:
+            self.merged_4d_file = search_and_select_one(
+                'merged_skeleton',
+                self.location.parent,
+                merged_skel_pattern, depth=0)
 
         # information from the file name
         self.test_kind = re.search(r'(\w)stat\d+.nii.gz', self.name).group(1)
@@ -908,11 +920,12 @@ class CorrpMap(RandomiseRun):
         os.popen(command).read()
 
 
-def skeleton_summary(corrpMap):
+def skeleton_summary(corrpMap, warp_dir=False, caselist=False):
     """ Make summary from corrpMap, using its merged_skeleton"""
     mergedSkeleton = MergedSkeleton(str(corrpMap.merged_4d_file))
     mergedSkeleton.skeleton_level_summary()
     mergedSkeleton.subject_level_summary()
+
 
     # set modality of the merged skeleton file
     mergedSkeleton.modality = corrpMap.modality
@@ -925,14 +938,40 @@ def skeleton_summary(corrpMap):
     # create a dataframe that has
     # - mean of values in the non zero skeleton for each subject
     # - standard deviation of values in the nonzero skeleton for each subject
-    mergedSkeleton.df = pd.DataFrame({
-        'subject': corrpMap.matrix_df.index,
-        'mean': mergedSkeleton.subject_nonzero_means,
-        'skeleton non_zero_std': mergedSkeleton.subject_nonzero_stds,
-        'group': group_list
-        })
-
     print('Creating figures to summarize information from the skeletons')
+    if warp_dir and caselist:
+        print(f'Using information in {warp_dir} to '
+              'extract values in warped maps')
+
+        mergedSkeleton.subject_level_summary_with_warp(warp_dir, caselist)
+        mergedSkeleton.df = pd.DataFrame({
+            'subject': corrpMap.matrix_df.index,
+            'mean': mergedSkeleton.subject_nonzero_means,
+            'skeleton_volume': mergedSkeleton.subject_nonzero_voxel_count,
+            'skeleton non_zero_std': mergedSkeleton.subject_nonzero_stds,
+            'zero_skeleton':mergedSkeleton.subject_zero_skeleton_values,
+            'group': group_list
+            })
+        SkeletonDir.get_subject_zero_skeleton_figure(mergedSkeleton)
+        out_image_loc = re.sub('.nii.gz',
+                               '_skeleton_zero_mean_in_warp.png',
+                               str(corrpMap.merged_4d_file))
+
+        mergedSkeleton.g_skel_zero.savefig(
+                out_image_loc,
+                facecolor='white', dpi=200)
+        plt.close()
+        print('\t- Values in the warpped maps for the zero voxels '
+              'in the skeleton')
+    else:
+        mergedSkeleton.df = pd.DataFrame({
+            'subject': corrpMap.matrix_df.index,
+            'mean': mergedSkeleton.subject_nonzero_means,
+            'skeleton_volume': mergedSkeleton.subject_nonzero_voxel_count,
+            'skeleton non_zero_std': mergedSkeleton.subject_nonzero_stds,
+            'group': group_list
+            })
+
 
     # Figure that shows
     # - skeleton group average as ahline
@@ -946,6 +985,16 @@ def skeleton_summary(corrpMap):
     mergedSkeleton.g.savefig(out_image_loc, facecolor='white', dpi=200)
     plt.close()
     print('\t- Average for the skeleton in each subjects')
+
+    SkeletonDir.get_subject_skeleton_volume_figure(mergedSkeleton)
+    out_image_loc = re.sub('.nii.gz',
+                           '_skeleton_volume_for_all_subjects.png',
+                           str(corrpMap.merged_4d_file))
+    mergedSkeleton.g_skel_vol.savefig(out_image_loc, facecolor='white', dpi=200)
+    plt.close()
+    print('\t- Volume for the skeleton in each subjects')
+
+
 
     mergedSkeleton.data_shape = corrpMap.data_shape
     mergedSkeleton.threshold = 0.01
@@ -1118,6 +1167,14 @@ The most simple way to use the script is
                            help='Create summary from all skeleton and also '
                                 'figures from merged_skeleton_images')
 
+    argparser.add_argument("--tbss_all_loc", "-tal",
+                           type=str,
+                           help='tbss_all output path')
+
+    argparser.add_argument("--web_summary", "-ws",
+                           action='store_true',
+                           help='Create web summary from the randomise '
+                                'outputs')
     args = argparser.parse_args()
 
     # Get information from individual corrp files
@@ -1144,10 +1201,17 @@ The most simple way to use the script is
     corrp_map_classes = []
     for corrp_map_loc in corrp_map_locs:
         print(f'\t{corrp_map_loc}')
-        corrpMap = CorrpMap(corrp_map_loc,
-                            threshold=args.threshold,
-                            contrast_file=args.contrast,
-                            matrix_file=args.matrix)
+        if args.merged_img_dir:
+            corrpMap = CorrpMap(corrp_map_loc,
+                                threshold=args.threshold,
+                                contrast_file=args.contrast,
+                                matrix_file=args.matrix,
+                                merged_img_dir=args.merged_img_dir)
+        else:
+            corrpMap = CorrpMap(corrp_map_loc,
+                                threshold=args.threshold,
+                                contrast_file=args.contrast,
+                                matrix_file=args.matrix)
         corrp_map_classes.append(corrpMap)
 
     # if no corrpMap is defined
@@ -1257,6 +1321,7 @@ The most simple way to use the script is
                                          facecolor='white', dpi=200)
                 print(out_image_loc)
                 plt.close()
+                mergedSkeleton = ''
         
         # if any of corrp map had significant voxels
         out_csv_name = 'values_extracted_for_all_subjects.csv'
@@ -1304,12 +1369,30 @@ The most simple way to use the script is
 
             elif hasattr(corrpMap, 'merged_4d_file') and \
                     corrpMap.merged_4d_file not in summarized_merged_maps and \
+                    corrpMap.merged_4d_file != 'missing' and args.tbss_all_loc:
+                print_head("Summarizing merged 4d file:"
+                           f"{corrpMap.merged_4d_file}")
+                warp_dir = str(Path(args.tbss_all_loc) / corrpMap.modality / 'warped')
+                print(warp_dir)
+                caselist = str(Path(args.tbss_all_loc) / 'log/caselist.txt')
+
+                skeleton_summary(corrpMap, warp_dir=warp_dir, caselist=caselist)
+                summarized_merged_maps.append(corrpMap.merged_4d_file)
+                print()
+
+            elif hasattr(corrpMap, 'merged_4d_file') and \
+                    corrpMap.merged_4d_file not in summarized_merged_maps and \
                     corrpMap.merged_4d_file != 'missing':
                 print_head("Summarizing merged 4d file:"
                            f"{corrpMap.merged_4d_file}")
                 skeleton_summary(corrpMap)
                 summarized_merged_maps.append(corrpMap.merged_4d_file)
                 print()
+
+    if args.web_summary:
+        create_html(corrp_map_classes, df, args)
+        print(corrpMap.location.parent / 'randomise_summary.html')
+        # run.web(corrp_map_classes, values_df, df)
 
         # # If overlap option is on
         # if args.overlap and len(args.input) == 2:
