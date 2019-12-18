@@ -1158,7 +1158,7 @@ The most simple way to use the script is
                            action='store_true',
                            help='Create figures')
 
-    argparser.add_argument("--tbss_fill", "-ff",
+    argparser.add_argument("--tbss_fill", "-tf",
                            action='store_true',
                            help='Create figures with tbss_fill outputs')
 
@@ -1171,7 +1171,7 @@ The most simple way to use the script is
                            type=str,
                            help='tbss_all output path')
 
-    argparser.add_argument("--web_summary", "-ws",
+    argparser.add_argument("--html_summary", "-hs",
                            action='store_true',
                            help='Create web summary from the randomise '
                                 'outputs')

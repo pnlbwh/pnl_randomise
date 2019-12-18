@@ -5,8 +5,7 @@
 {% endblock %}
 
 {% block navbar %}
-    <li class="active"><a href="#">hos</a></li>
-    <li><a href="#">Link</a></li>
+<li class="active"><a href="#">html created using randomise_summary.py by {{ user }}</a></li>
 {% endblock %}
 
 {% block subtitle %}
@@ -24,7 +23,6 @@
 
 {% endblock %}
 
-
 {% block matrixsummary %}
     <h2>Matrix summary</h2>
     <h4>Matrix file : {{ mat_location }}
@@ -35,6 +33,7 @@
     </div>
 {% endblock %}
 
+
 {% block contrastsummary %}
     <h2>Contrast summary</h2>
     <h4>Contrast file : {{ con_location }}
@@ -43,6 +42,7 @@
     {{ con_table|safe }}
     </div>
 {% endblock %}
+
 
 {% block outputsummary %}
     <h2>Output corrected p-map summary</h2>
@@ -53,27 +53,52 @@
 
 
 {% block corrpmapsummary %}
-    <h2>Significant cluster figures</h2>
-    <h4>For bigger figure, please click on the figure</h4>
-    <div class="row">
-      <div class="col-md-12">
-        <div id="mdb-lightbox-ui"></div>
-        <div class="mdb-lightbox no-margin">
-         {% for corrpMap in corrpMaps %}
-            {% if corrpMap.significant %}
-              <figure class="col-md-4">
-                <a class="black-text" href={{ corrpMap.out_image_loc }} data-size="1600x1067">
-                  <img alt="picture" src={{ corrpMap.out_image_loc }} class="img-thumbnail">
-                  <h3 class="text-center my-3">{{ corrpMap.modality }} {{ corrpMap.contrast_text }}</h3>
-                </a>
-              </figure>
-             {% endif %}
-          {% endfor %}
+    {% if outfigures is sameas true %}
+        <h2>Significant cluster figures</h2>
+        <h4>For bigger figure, please click on the figure</h4>
+        <div class="row">
+          <div class="col-md-12">
+            <div id="mdb-lightbox-ui"></div>
+            <div class="mdb-lightbox no-margin">
+             {% for corrpMap in corrpMaps %}
+                {% if corrpMap.significant %}
+                  <figure class="col-md-4">
+                    <a class="black-text" href={{ corrpMap.out_image_loc }} data-size="1600x1067">
+                      <img alt="picture" src={{ corrpMap.out_image_loc }} class="img-thumbnail">
+                      <h3 class="text-center my-3">{{ corrpMap.modality }} {{ corrpMap.contrast_text }}</h3>
+                    </a>
+                  </figure>
+                 {% endif %}
+              {% endfor %}
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
+    {% endif %}
 
-    <h2>Significant cluster figures - Mean value in the significant cluster for each group</h2>
+    {% if filled_outfigures is sameas true %}
+        <h4>tbss_fill applied image</h4>
+        <div class="row">
+          <div class="col-md-12">
+            <div id="mdb-lightbox-ui"></div>
+            <div class="mdb-lightbox no-margin">
+             {% for corrpMap in corrpMaps %}
+                {% if corrpMap.significant %}
+                  <figure class="col-md-4">
+                    <a class="black-text" href={{ corrpMap.filled_out_image_loc }} data-size="1600x1067">
+                      <img alt="picture" src={{ corrpMap.filled_out_image_loc }} class="img-thumbnail">
+                      <h3 class="text-center my-3">{{ corrpMap.modality }} {{ corrpMap.contrast_text }}</h3>
+                    </a>
+                  </figure>
+                 {% endif %}
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+    {% endif %}
+
+
+    {% if outsigfigures is sameas true %}
+    <h2>Significant cluster figures - mean in the significant cluster for each group</h2>
     <div class="row">
       <div class="col-md-12">
         <div id="mdb-lightbox-ui"></div>
@@ -91,12 +116,22 @@
         </div>
       </div>
     </div>
+    {% endif %}
 
+    {% if outsigfigures is sameas true %}
+    <h2>Significant cluster values - mean in the significant cluster for each group</h2>
+    <h4>saved in csv file : {{ values_df_loc }}</h4>
+    <br><br>
+    <div class="table-responsive">
+    {{ values_df|safe }}
+    </div>
+    {% endif %}
 {% endblock %}
 
 <hr>
 
 {% block skeletonsummary %}
+    {% if skeleton_figure_check is sameas true %}
     <h2>Skeleton summary Figures</h2>
     <h4>For bigger figure, please click on the figure</h4>
     <h3>Skeleton average</h3>
@@ -115,6 +150,7 @@
         </div>
       </div>
     </div>
+
     <div class="row">
       <div class="col-md-12">
         <div id="mdb-lightbox-ui"></div>
@@ -181,7 +217,10 @@
         </div>
       </div>
     </div>
+    {% endif %}
 
+    {% if skel_vol_figure_check is sameas true %}
+    <h3>Volume of the skeleton in all subjects</h3>
     <div class="row">
       <div class="col-md-12">
         <div id="mdb-lightbox-ui"></div>
@@ -197,8 +236,10 @@
         </div>
       </div>
     </div>
+    {% endif %}
 
-    <h3>Values in the warpped maps for those zero voxels in the skeleton for all subjects</h3>
+    {% if warped_figure_check is sameas true %}
+    <h3>Values in the warpped maps for the zero voxels in the skeleton for all subjects</h3>
     <div class="row">
       <div class="col-md-12">
         <div id="mdb-lightbox-ui"></div>
@@ -214,6 +255,7 @@
         </div>
       </div>
     </div>
+    {% endif %}
 {% endblock %}
 
 {% block footer %}

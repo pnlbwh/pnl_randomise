@@ -6,6 +6,7 @@ from os import stat
 import os
 import re
 import time, datetime
+import pandas as pd
 
 def create_html(corrpMaps, df, args):
     root = os.path.dirname(os.path.abspath(__file__))
@@ -17,6 +18,10 @@ def create_html(corrpMaps, df, args):
     dates = []
     merged_4d_data_list = []
     modality_list = []
+
+    outfigures = []
+    filled_outfigures = []
+    outsigfigures = []
     for corrpMap in corrpMaps:
         owner = getpwuid(stat(corrpMap.location).st_uid).pw_name
         file_owners.append(owner)
@@ -27,12 +32,32 @@ def create_html(corrpMaps, df, args):
         if corrpMap.significant:
             corrpMap.out_image_loc = re.sub(
                 '.nii.gz', '.png', str(corrpMap.location))
+            corrpMap.filled_out_image_loc = re.sub(
+                '.nii.gz', '_filled.png', str(corrpMap.location))
+            if Path(corrpMap.out_image_loc).is_file():
+                outfigures.append(True)
+            else:
+                outfigures.append(False)
+
+            if Path(corrpMap.filled_out_image_loc).is_file():
+                filled_outfigures.append(True)
+            else:
+                filled_outfigures.append(False)
+
             corrpMap.sig_out_image_loc = re.sub(
                 '.nii.gz', '_sig_average_for_all_subjects.png',
                 str(corrpMap.location))
+            if Path(corrpMap.sig_out_image_loc).is_file():
+                outsigfigures.append(True)
+            else:
+                outsigfigures.append(False)
 
         merged_4d_data_list.append(corrpMap.merged_4d_file)
         modality_list.append(corrpMap.modality)
+
+    outfigures = all(outfigures)
+    outsigfigures = all(outsigfigures)
+    filled_outfigures = all(filled_outfigures)
 
     file_owners = list(set(file_owners))
     datecs = list(set(dates))
@@ -40,6 +65,13 @@ def create_html(corrpMaps, df, args):
     modality_list = list(set(modality_list))
 
     # filename = os.path.join(root, 'prac_index.html')
+    values_df_loc = corrpMap.location.parent / \
+        'values_extracted_for_all_subjects.csv'
+    if values_df_loc.is_file():
+        values_df = pd.read_csv(str(values_df_loc), index_col=0)
+        values_df = re.sub('dataframe', 'table', values_df.to_html())
+    else:
+        values_df = ''
     filename = corrpMap.location.parent / 'randomise_summary.html'
 
     # merged_4d_data_figures
@@ -78,6 +110,17 @@ def create_html(corrpMaps, df, args):
             '.nii.gz', '_skeleton_zero_mean_in_warp.png',
             str(merged_4d_file))
 
+    # check whether the images exist
+    skeleton_figure_check = all(
+        [Path(x).is_file() for x in list(skeleton_average_figures.values())])
+
+    skel_vol_figure_check = all(
+        [Path(x).is_file() for x in list(skel_vol_figures.values())])
+
+    warped_figure_check = all(
+        [Path(x).is_file() for x in list(warped_map_figures.values())])
+
+
     mat_location = Path(corrpMaps[0].matrix_file)
     con_location = Path(corrpMaps[0].contrast_file)
 
@@ -101,6 +144,14 @@ def create_html(corrpMaps, df, args):
                              corrpMaps[0].matrix_info.to_html()),
             table=re.sub('dataframe', 'table', df.to_html(index=False)),
             corrpMaps=[x.__dict__ for x in corrpMaps],
+            outfigures=outfigures,
+            outsigfigures=outsigfigures,
+            filled_outfigures=filled_outfigures,
+            values_df_loc=values_df_loc,
+            values_df=values_df,
+            skeleton_figure_check=skel_vol_figure_check,
+            skel_vol_figure_check=skel_vol_figure_check,
+            warped_figure_check=warped_figure_check,
             skeleton_average_figures=skeleton_average_figures,
             average_figures=average_figures,
             std_figures=std_figures,
