@@ -1389,7 +1389,7 @@ The most simple way to use the script is
                 summarized_merged_maps.append(corrpMap.merged_4d_file)
                 print()
 
-    if args.web_summary:
+    if args.html_summary:
         create_html(corrp_map_classes, df, args)
         print(corrpMap.location.parent / 'randomise_summary.html')
         # run.web(corrp_map_classes, values_df, df)
