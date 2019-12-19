@@ -73,17 +73,59 @@ getpwuid
 
 ### Usage
 
+
+
+
 #### Simple use
+
+##### If I were you, I wouldn't read all of documentation below. Just try runing below
 
 ```sh
 # path where tbss_*corrp_tstat*nii.gz
 cd /TBSS/STAT/DIR
 randomise_summary.py 
+
+# It automatically finds `design.mat` and `design.con` in the current directory,
+# along with `*corrp*nii.gz` images when ran without any options.
+```
+
+
+Individual `*corrp*nii.gz` images, `design.mat` and `design.con` in 
+different location could be specified with options.
+
+```
 randomise_summary.py --constrat design.con --matrix design.mat
 randomise_summary.py --input tbss_FA_corrp_tstat1.nii.gz
 ```
 
+
+##### Control p-value threshold
+The p-value for defining significance could be altered by adding extra option `-t` or `--threshold`
+
+```sh
+randomise_summary.py -t 0.99
+```
+
 #### More advanced use
+
+##### Extract values for the significant cluster in each subject
+
+It is a common practice to look at correlations between the mean values of each
+subject in the significant cluster and their clinical scales.  Simply add `--subject_values` option for this.
+
+```sh
+randomise_summary.py --subject_values
+```
+
+If your randomise directory does not have the `all_*.nii.gz` (4d merged image), 
+specify the directory where the 4d merged images are, with `--merged_img_dir`
+
+```sh
+randomise_summary.py --subject_values \
+                     --merged_img_dir /DIRECTORY/WITH/all_4D_skeleton.nii.gz
+```
+
+##### more options
 
 ```sh
 randomise_summary.py --sig_only
@@ -112,11 +154,12 @@ google-chrome randomise_summary.html
 
 ### Example outputs
 
+#### simple run
 ```sh
 randomise_summary.py
 ```
 
-```bash
+```
 Importing modules
 Importing modules complete
 
@@ -171,6 +214,8 @@ Group columns are : col 1, col 2
 ```
 
 
+#### Figure 
+
 ```sh
 randomise_summary.py --figure
 ```
@@ -180,6 +225,8 @@ randomise_summary.py --figure
 ![figure_fw](test_tbss/stats_real/tbss_FW_tfce_corrp_tstat2.png)
 
 
+
+#### `tbss_fill` Figure 
 
 ```sh
 randomise_summary.py --tbss_fill
@@ -191,90 +238,6 @@ randomise_summary.py --tbss_fill
 
 
 
-### Usage
-
-
-
-> Simplest use
-
-It automatically finds `design.mat` and `design.con` in the current directory,
-along with `*corrp*nii.gz` images when ran without any options.
-
-```sh
-cd RANDOMISE/LOCATION/stats
-randomise_summary.py
-```
-
-
-
-> Individual `*corrp*nii.gz`
-
-Also individual `*corrp*nii.gz` images, `design.mat` and `design.con` in 
-different location could be specified with options.
-
-```sh
-randomise_summary.py -i stats/tbss_corrp_tstat1.nii.gz
-
-# you can also specify design matrices if they have different naming
-randomise_summary.py -i stats/tbss_corrp_tstat1.nii.gz \
-                     -d stats/this_is_design_file.mat \
-                     -c stats/this_is_contrast_file.mat \
-
-```
-
-
-
-
-> Control p-value threshold
-
-The p-value for significance could be altered, if higher threshold is rquired
-by adding extra option `-t` or `--threshold`
-
-```sh
-randomise_summary.py -t 0.99
-```
-
-
-
-
-> Run FSL's atlas query with the significant cluster
-
-FSL's atlas query returns information about the location of the cluster. If
-`-a` or `--atlas` option is given, the script will run atlas query on the 
-significant cluster and print the summarized output on screen
-
-```sh
-randomise_summary.py -a
-```
-
-
-
-> Extract values for the significant cluster in each subject
-
-It is a common practice to look at the correlation between the values of each
-subject in the significant cluster and their clinical scales.  Simply add `--subject_values` option for this.
-
-```sh
-randomise_summary.py --subject_values
-```
-
-If your randomise directory does not have the `all_*.nii.gz` (4d merged image), 
-specify the directory where the 4d merged images are, with `--merged_img_dir`
-
-```sh
-randomise_summary.py --subject_values \
-                     --merged_img_dir /DIRECTORY/WITH/all_4D_skeleton.nii.gz
-```
-
-
-
-> Create png file -- **under development : link kcho_figure.py**
-
-```sh
-randomise_summary.py --figure
-```
-
-
 
 
 > All options
@@ -283,19 +246,28 @@ randomise_summary.py --figure
 usage: randomise_summary.py [-h] [--directory DIRECTORY]
                             [--input INPUT [INPUT ...]]
                             [--threshold THRESHOLD] [--contrast CONTRAST]
-                            [--matrix MATRIX] [--subject_values]
-                            [--merged_img_dir MERGED_IMG_DIR] [--atlasquery]
-                            [--figure]
+                            [--matrix MATRIX] [--template TEMPLATE]
+                            [--subject_values] [--cov_info] [--sig_only]
+                            [--f_only] [--merged_img_dir MERGED_IMG_DIR]
+                            [--merged_image MERGED_IMAGE] [--atlasquery]
+                            [--figure] [--tbss_fill] [--skeleton_summary]
+                            [--tbss_all_loc TBSS_ALL_LOC] [--html_summary]
 
-        randomise_summary.py --dir /example/randomise/output/dir/
-        
+The most simple way to use the script is
+  cd stats
+  ls
+    all_FA_skeleton.nii.gz
+    tbss_FA_tfce_corrp_tstat1.nii.gz
+    tbss_FA_tfce_corrp_tstat2.nii.gz
+    design.mat
+    design.con
+  randomise_summary.py
+
 
 optional arguments:
   -h, --help            show this help message and exit
   --directory DIRECTORY, -d DIRECTORY
-                        Specify randomise out dir. This this option is given,
-                        design.mat and design.con within the directory are
-                        read by default.
+                        Specify randomise out directory.
   --input INPUT [INPUT ...], -i INPUT [INPUT ...]
                         Specify randomise out corrp files. If this option is
                         given, --directory input is ignored
@@ -305,17 +277,29 @@ optional arguments:
                         Contrast file used for the randomise.
   --matrix MATRIX, -m MATRIX
                         Matrix file used for the randomise
+  --template TEMPLATE, -template TEMPLATE
+                        FA template used (or created) in TBSS
   --subject_values, -s  Print average in the significant cluster for all
                         subjects
-  --merged_img_dir MERGED_IMG_DIR, -p MERGED_IMG_DIR
+  --cov_info, -ci       Print covariate information for each group
+  --sig_only, -so       Print only the significant statistics
+  --f_only, -fo         Print only the output from f-test
+  --merged_img_dir MERGED_IMG_DIR, -merged_image_d MERGED_IMG_DIR
+                        Directory that contains merged files
+  --merged_image MERGED_IMAGE, -merged_image MERGED_IMAGE
                         Directory that contains merged files
   --atlasquery, -a      Run atlas query on significant corrp files
   --figure, -f          Create figures
+  --tbss_fill, -tf      Create figures with tbss_fill outputs
+  --skeleton_summary, -ss
+                        Create summary from all skeleton and also figures from
+                        merged_skeleton_images
+  --tbss_all_loc TBSS_ALL_LOC, -tal TBSS_ALL_LOC
+                        tbss_all output path
+  --html_summary, -hs   Create web summary from the randomise outputs
 
 Kevin Cho Thursday, August 22, 2019
 ```
-
-
 
 
 ### Test using `test_randomise_summary.py`
