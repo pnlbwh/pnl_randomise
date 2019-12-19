@@ -233,6 +233,8 @@ randomise_summary.py --tbss_fill
 ```
 
 ![figure_fa_fill](test_tbss/stats_real/tbss_FA_tfce_corrp_tstat1_filled.png =250x)
+<img src="test_tbss/stats_real/tbss_FA_tfce_corrp_tstat1_filled.png" width="300">
+
 ![figure_fat_fill](test_tbss/stats_real/tbss_FAt_tfce_corrp_tstat1_filled.png =250x)
 ![figure_fw_fill](test_tbss/stats_real/tbss_FW_tfce_corrp_tstat2_filled.png =250x)
 
