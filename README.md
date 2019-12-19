@@ -220,10 +220,9 @@ Group columns are : col 1, col 2
 randomise_summary.py --figure
 ```
 
-![figure_fa](test_tbss/stats_real/tbss_FA_tfce_corrp_tstat1.png)
-![figure_fat](test_tbss/stats_real/tbss_FAt_tfce_corrp_tstat1.png)
-![figure_fw](test_tbss/stats_real/tbss_FW_tfce_corrp_tstat2.png)
-
+<img src="test_tbss/stats_real/tbss_FA_tfce_corrp_tstat1.png" width="400"></img>
+<img src="test_tbss/stats_real/tbss_FAt_tfce_corrp_tstat1.png" width="400"></img>
+<img src="test_tbss/stats_real/tbss_FW_tfce_corrp_tstat2.png" width="400"></img>
 
 
 #### `tbss_fill` Figure 
@@ -232,9 +231,9 @@ randomise_summary.py --figure
 randomise_summary.py --tbss_fill
 ```
 
-<img src="test_tbss/stats_real/tbss_FA_tfce_corrp_tstat1_filled.png" width="300"></img>
-<img src="test_tbss/stats_real/tbss_FA_tfce_corrp_tstat1_filled.png" width="300"></img>
-<img src="test_tbss/stats_real/tbss_FA_tfce_corrp_tstat1_filled.png" width="300"></img>
+<img src="test_tbss/stats_real/tbss_FA_tfce_corrp_tstat1_filled.png" width="400"></img>
+<img src="test_tbss/stats_real/tbss_FAt_tfce_corrp_tstat1_filled.png" width="400"></img>
+<img src="test_tbss/stats_real/tbss_FW_tfce_corrp_tstat2_filled.png" width="400"></img>
 
 
 
