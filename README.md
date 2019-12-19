@@ -236,11 +236,7 @@ randomise_summary.py --tbss_fill
 <img src="test_tbss/stats_real/tbss_FW_tfce_corrp_tstat2_filled.png" width="400"></img>
 
 
-
-
-
-
-> All options
+#### All options
 
 ```sh
 usage: randomise_summary.py [-h] [--directory DIRECTORY]
@@ -305,7 +301,7 @@ Kevin Cho Thursday, August 22, 2019
 ### Test using `test_randomise_summary.py`
 
 ```sh
-python test_randomise_summary.py
+test_randomise_summary.py
 ```
 
 Above script checks for whether 
