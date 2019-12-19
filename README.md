@@ -177,7 +177,7 @@ randomise_summary.py --figure
 
 ![figure_fa](test_tbss/stats_real/tbss_FA_tfce_corrp_tstat1.png)
 ![figure_fat](test_tbss/stats_real/tbss_FAt_tfce_corrp_tstat1.png)
-![figure_fw](test_tbss/stats_real/tbss_FW_tfce_corrp_tstat1.png)
+![figure_fw](test_tbss/stats_real/tbss_FW_tfce_corrp_tstat2.png)
 
 
 
@@ -187,7 +187,7 @@ randomise_summary.py --tbss_fill
 
 ![figure_fa_fill](test_tbss/stats_real/tbss_FA_tfce_corrp_tstat1_filled.png)
 ![figure_fat_fill](test_tbss/stats_real/tbss_FAt_tfce_corrp_tstat1_filled.png)
-![figure_fw_fill](test_tbss/stats_real/tbss_FW_tfce_corrp_tstat1_filled.png)
+![figure_fw_fill](test_tbss/stats_real/tbss_FW_tfce_corrp_tstat2_filled.png)
 
 
 
