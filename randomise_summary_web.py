@@ -8,7 +8,27 @@ import re
 import time, datetime
 import pandas as pd
 
+
+def order_corrpMaps(corrpMaps):
+    """Order corrpMaps so FA, FAt and FW are summarized before others"""
+    corrpMap_modalities = [x.modality for x in corrpMaps]
+    modality_order = ['FA', 'FAt', 'FW']
+    modality_order = [x for x in modality_order if x in corrpMap_modalities]
+    rest = [x for x in corrpMap_modalities if x not in modality_order]
+    modality_order = modality_order + rest
+
+    new_corrpMaps = []
+    for modality in modality_order:
+        for corrpMap in corrpMaps:
+            if corrpMap.modality == modality:
+                new_corrpMaps.append(corrpMap)
+
+    return new_corrpMaps
+
+
 def create_html(corrpMaps, df, args):
+    """Create html that summarizes randomise_summary.py outputs"""
+    corrpMaps = order_corrpMaps(corrpMaps)
     root = os.path.dirname(os.path.abspath(__file__))
     templates_dir = os.path.join(root, 'templates')
     env = Environment(loader=FileSystemLoader(templates_dir))

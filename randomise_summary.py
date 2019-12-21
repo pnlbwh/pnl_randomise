@@ -1091,7 +1091,7 @@ The most simple way to use the script is
     design.mat
     design.con
   randomise_summary.py
-        ''', epilog="Kevin Cho Thursday, August 22, 2019")
+        ''', epilog="Kevin Cho 21st December 2019")
 
     argparser.add_argument(
         "--directory", "-d",
@@ -1099,82 +1099,74 @@ The most simple way to use the script is
         help='Specify randomise out directory.',
         default=os.getcwd())
 
-    argparser.add_argument("--input", "-i",
-                           type=str,
-                           nargs='+',
-                           help='Specify randomise out corrp files. If this \
-                           option is given, --directory input is ignored')
+    argparser.add_argument(
+        "--input", "-i", type=str, nargs='+',
+        help='Specify randomise out corrp files. If this option is given, '
+             '--directory input is ignored')
 
-    argparser.add_argument("--threshold", "-t",
-                           type=float,
-                           help='Threshold for the significance',
-                           default=0.95)
+    argparser.add_argument(
+        "--threshold", "-t", type=float, default=0.95,
+        help='Threshold for the significance')
 
-    argparser.add_argument("--contrast", "-c",
-                           type=str,
-                           default='design.con',
-                           help='Contrast file used for the randomise.')
+    argparser.add_argument(
+        "--contrast", "-c", type=str, default='design.con',
+        help='Contrast file used for the randomise.')
 
-    argparser.add_argument("--matrix", "-m",
-                           type=str,
-                           default='design.mat',
-                           help='Matrix file used for the randomise')
+    argparser.add_argument(
+        "--matrix", "-m", type=str, default='design.mat',
+        help='Matrix file used for the randomise')
 
-    argparser.add_argument("--template", "-template",
-                           type=str,
-                           default='enigma',
-                           help='FA template used (or created) in TBSS')
+    argparser.add_argument(
+        "--template", "-template", type=str, default='enigma',
+        help='FA template used (or created) in TBSS')
 
-    argparser.add_argument("--subject_values", "-s",
-                           action='store_true',
-                           help='Print average in the significant cluster for \
-                           all subjects')
+    argparser.add_argument(
+        "--subject_values", "-s", action='store_true',
+        help='Print average in the significant cluster for all subjects')
 
-    argparser.add_argument("--cov_info", "-ci",
-                           action='store_true',
-                           help='Print covariate information for each group')
+    argparser.add_argument(
+        "--cov_info", "-ci", action='store_true',
+        help='Print covariate information for each group')
 
-    argparser.add_argument("--sig_only", "-so",
-                           action='store_true',
-                           help='Print only the significant statistics')
+    argparser.add_argument(
+        "--sig_only", "-so", action='store_true',
+        help='Print only the significant statistics')
 
-    argparser.add_argument("--f_only", "-fo",
-                           action='store_true',
-                           help='Print only the output from f-test')
+    argparser.add_argument(
+        "--f_only", "-fo", action='store_true',
+        help='Print only the output from f-test')
 
-    argparser.add_argument("--merged_img_dir", "-merged_image_d",
-                           type=str,
-                           help='Directory that contains merged files')
+    argparser.add_argument(
+        "--merged_img_dir", "-merged_image_d", type=str,
+        help='Directory that contains merged files')
 
-    argparser.add_argument("--merged_image", "-merged_image",
-                           type=str,
-                           help='Directory that contains merged files')
+    argparser.add_argument(
+        "--merged_image", "-merged_image", type=str,
+        help='Directory that contains merged files')
 
-    argparser.add_argument("--atlasquery", "-a",
-                           action='store_true',
-                           help='Run atlas query on significant corrp files')
+    argparser.add_argument(
+        "--atlasquery", "-a", action='store_true',
+        help='Run atlas query on significant corrp files')
 
-    argparser.add_argument("--figure", "-f",
-                           action='store_true',
-                           help='Create figures')
+    argparser.add_argument(
+        "--figure", "-f", action='store_true', help='Create figures')
 
-    argparser.add_argument("--tbss_fill", "-tf",
-                           action='store_true',
-                           help='Create figures with tbss_fill outputs')
+    argparser.add_argument(
+        "--tbss_fill", "-tf", action='store_true',
+        help='Create figures with tbss_fill outputs')
 
-    argparser.add_argument("--skeleton_summary", "-ss",
-                           action='store_true',
-                           help='Create summary from all skeleton and also '
-                                'figures from merged_skeleton_images')
+    argparser.add_argument(
+        "--skeleton_summary", "-ss", action='store_true',
+        help='Create summary from all skeleton and also figures from '
+             'merged_skeleton_images')
 
-    argparser.add_argument("--tbss_all_loc", "-tal",
-                           type=str,
-                           help='tbss_all output path')
+    argparser.add_argument(
+        "--tbss_all_loc", "-tal", type=str, help='tbss_all output path')
 
-    argparser.add_argument("--html_summary", "-hs",
-                           action='store_true',
-                           help='Create web summary from the randomise '
-                                'outputs')
+    argparser.add_argument(
+        "--html_summary", "-hs", action='store_true',
+        help='Create web summary from the randomise outputs')
+
     args = argparser.parse_args()
 
     # Get information from individual corrp files
@@ -1392,18 +1384,3 @@ The most simple way to use the script is
     if args.html_summary:
         create_html(corrp_map_classes, df, args)
         print(corrpMap.location.parent / 'randomise_summary.html')
-        # run.web(corrp_map_classes, values_df, df)
-
-        # # If overlap option is on
-        # if args.overlap and len(args.input) == 2:
-            # tbssFigure = nifti_snapshot.TbssFigure(
-                # image_files=args.input,
-                # output_file=args.output_file,
-                # cmap_list=args.cmap,
-                # overlap_cmap=args.overlap_cmap,
-                # cbar_titles=args.cbar_title,
-                # alpha_list=[1, 1]+[args.overlap_alpha],
-                # title=args.title)
-
-            # tbssFigure.create_figure_two_maps_and_overlap()
-

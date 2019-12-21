@@ -23,7 +23,6 @@ import argparse
 from itertools import combinations
 from stats import anova, ttest
 
-
 class MergedSkeleton:
     """TBSS all_modality_skeleton map object"""
     def __init__(self, merged_skeleton_loc, template='enigma'):
@@ -31,23 +30,28 @@ class MergedSkeleton:
         self.merged_skeleton_loc = merged_skeleton_loc
         self.merged_skeleton_img = nb.load(str(self.merged_skeleton_loc))
         print(f"Reading {merged_skeleton_loc}")
-        self.merged_skeleton_data = self.merged_skeleton_img.get_data()
+        self.merged_skeleton_data = self.merged_skeleton_img.get_fdata()
+        print(f"Completed reading {merged_skeleton_loc}")
 
         # data shape
         # self.data_shape = self.
 
         # ENIGMA
+        print(f"Reading enigma skeleton mask")
         self.enigma_dir = Path('/data/pnl/soft/pnlpipe3/tbss/data/enigmaDTI')
         self.enigma_fa_loc = self.enigma_dir / 'ENIGMA_DTI_FA.nii.gz'
         self.enigma_skeleton_mask_loc = self.enigma_dir / \
             'ENIGMA_DTI_FA_skeleton_mask.nii.gz'
         self.mask_data = nb.load(
-            str(self.enigma_skeleton_mask_loc)).get_data() == 1
+            str(self.enigma_skeleton_mask_loc)).get_fdata() == 1
+        print(f"Completed reading enigma skeleton mask")
 
         # binarize merged skeleton map
+        print(f"Estimating sum of binarized skeleton maps for all subject")
         self.merged_skeleton_data_bin_sum = np.sum(
             np.where(self.merged_skeleton_data == 0, 0, 1),
             axis=3)
+        print(f"Estimating mean of binarized skeleton maps for all subject")
         self.merged_skeleton_data_bin_mean = np.mean(
             np.where(self.merged_skeleton_data == 0, 0, 1),
             axis=3)
@@ -61,7 +65,7 @@ class MergedSkeleton:
         self.modality = corrpMap.modality
         significant_cluster_data = np.where(
             corrpMap.corrp_data >= corrpMap.threshold, 1, 0)
-            
+
         self.sig_mask = significant_cluster_data
         self.cluster_averages = {}
         # Get average of values in the `significant_cluster_data` map
@@ -103,26 +107,28 @@ class MergedSkeleton:
                 float, nonzero std of merged_skeleton_mean_map
         """
         # skeleton mean and std maps
+        print(f"Estimating average of all skeleton maps")
         self.merged_skeleton_mean_map = np.mean(
             self.merged_skeleton_data, axis=3)
+        print(f"Estimating standard deviation of all skeleton maps")
         self.merged_skeleton_std_map = np.std(
                 self.merged_skeleton_data, axis=3)
 
         # skeleton mean and std values
+        print(f"Get a mean value skeleton for all subject = single value")
         self.merged_skeleton_mean = self.merged_skeleton_mean_map[
                 np.nonzero(self.merged_skeleton_mean_map)].mean()
+        print(f"Get a std skeleton for all subject = single value")
         self.merged_skeleton_std = self.merged_skeleton_std_map[
                 np.nonzero(self.merged_skeleton_std_map)].mean()
 
         # assign 1 for voxels where all subject have skeleton
         # assign 0 for voxels where only some subjects have skeleton
+        print("Get alteration map")
         self.skeleton_alteration_map = np.where(
             (self.merged_skeleton_data_bin_mean != 0) &
             (self.merged_skeleton_data_bin_mean != 1),
             1, 0)
-
-        # TODO: diff map between ENIGMA skeleton mask
-        target_data = nb.load(str(self.enigma_skeleton_mask_loc)).get_data()
 
     def subject_level_summary(self):
         """Summarize subject skeletons
@@ -139,6 +145,8 @@ class MergedSkeleton:
         self.subject_nonzero_voxel_count = []
 
         # loop through each subject array
+        # TODO: change here to array computation
+        print('loop through each subject array')
         for vol_num in np.arange(self.merged_skeleton_data.shape[-1]):
             vol_data = self.merged_skeleton_data[:, :, :, vol_num]
             left_vol_data = self.merged_skeleton_data[90:, :, :, vol_num]
@@ -155,6 +163,7 @@ class MergedSkeleton:
             self.subject_nonzero_means_right.append(non_zero_mean_right)
             self.subject_nonzero_stds.append(non_zero_std)
             self.subject_nonzero_voxel_count.append(non_zero_voxel_count)
+        print('loop through each subject array - finished')
 
     def subject_level_summary_with_warp(self, warp_dir, caselist):
         """Summarize subject skeletons
@@ -377,8 +386,10 @@ class SkeletonDir:
                     row.subject, ha='center', va='center')
 
     def get_subject_zero_skeleton_figure(self):
+        plt.style.use('default')
         """Subject skeleton volume figure """
         tmp_df = self.df.copy()
+
         # tmp_df.at[0, 'zero_skeleton'] = [1,2,3,4]
         for index, row in tmp_df.iterrows():
             try:
@@ -394,13 +405,15 @@ class SkeletonDir:
                 tmp_df.loc[index, 'std'] = 0
                 tmp_df.loc[index, 'count'] = 0
 
+        # select only the subjects with zero voxels
+        zv_subj_nums = tmp_df[tmp_df['count'] != 0].index
 
         tmp_df = pd.melt(
             tmp_df, id_vars='subject',
             var_name='zero skeleton info',
             value_vars=['mean', 'min', 'max', 'std', 'count'],
             value_name='value').reset_index()
-            
+
         self.g_skel_zero = sns.catplot(
                 x='subject',
                 y='value',
@@ -414,16 +427,24 @@ class SkeletonDir:
             var = ax.get_title().split(' = ')[1]
             ax.set_title('')
             ax.set_ylabel(var)
+
             # ax.set_ylabel(f'{self.modality} zero-skeleton mean')
-            if len(self.df) > 100:
-                for tick in ax.xaxis.get_major_ticks():
-                    tick.label.set_fontsize(8)
+            if len(self.df) > 50:
+                ax.set_xticks(zv_subj_nums)
+                ax.set_xticklabels(zv_subj_nums)
+                # for tick in ax.xaxis.get_major_ticks():
+                    # tick.label.set_fontsize(8)
+
+            # highlight the subject with zero voxels in the skeleton
+            for subj_num in zv_subj_nums:
+                ax.axvline(subj_num, color='r', alpha=0.3, ls='--')
+
         ax.set_xlabel('Subject')
 
         self.g_skel_zero.fig.suptitle(
             f'Summary of values in the warped {self.modality} images\n' 
-            f'at the zero skeleton voxels in the skeletonized '
-            f'{self.modality} map for all subjects',
+            f'at the zero voxels in the skeletonized {self.modality} map for '
+            'all subjects',
             fontweight='bold', y=1.05)
 
         # # highlight the subject who are off the most common value
@@ -468,11 +489,23 @@ class SkeletonDirSig(SkeletonDir):
         })
 
 
-def skeleton_summary(merged_4d_file, tbss_all_loc):
+
+def skeleton_summary(merged_4d_file, tbss_all_loc, **kwargs):
     """ Make summary from corrpMap, using its merged_skeleton"""
     caselist = str(Path(tbss_all_loc) / 'log/caselist.txt')
 
+
+    # update with design contrast and matrix
     mergedSkeleton = MergedSkeleton(merged_4d_file)
+
+    if 'directory' in kwargs:
+        location = kwargs.get('directory')
+        contrast = Path(location) / 'design.con'
+        matrix = Path(location) / 'design.mat'
+        mergedSkeleton.get_matrix_info()
+        mergedSkeleton.get_contrast_info()
+
+
     mergedSkeleton.skeleton_level_summary()
     mergedSkeleton.subject_level_summary()
 
@@ -545,6 +578,21 @@ The most simple way to use the script is
         ''', epilog="Kevin Cho Thursday, August 22, 2019")
 
     argparser.add_argument(
+        "--dir", "-d",
+        type=str,
+        help='design directory')
+
+    argparser.add_argument(
+        "--contrast", "-con",
+        type=str,
+        help='design contrast')
+
+    argparser.add_argument(
+        "--matrix", "-mat",
+        type=str,
+        help='design matrix')
+
+    argparser.add_argument(
         "--merged_4d_file", "-i",
         type=str,
         help='Merged 4d file')
@@ -566,4 +614,9 @@ The most simple way to use the script is
 
     args = argparser.parse_args()
 
-    skeleton_summary(args.merged_4d_file, args.tbss_all_loc)
+    if args.dir:
+        skeleton_summary(args.merged_4d_file, args.tbss_all_loc,
+                         directory=args.dir)
+    else:
+        skeleton_summary(args.merged_4d_file, args.tbss_all_loc,
+                         matrix=args.matrix, contrast=args.contrast)

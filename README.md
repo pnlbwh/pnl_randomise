@@ -1,14 +1,11 @@
-# fsl_randomise
-
-FSL randomise related scripts.
-
+# FSL randomise related scripts
 
 
 ## TODO
-- Write a complete test for randomise_summary.py
+- Make a option to run `randomise_parallel_pnl` in environments without `bsub`
+- Write a complete test for `randomise_summary.py`
 - Write up contrast line translation functions for interaction effect
-- ADD atlas query output to the html summary
-
+- Add atlas query output to the html summary
 
 
 
