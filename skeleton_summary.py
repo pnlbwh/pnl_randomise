@@ -70,15 +70,17 @@ class MergedSkeleton:
             axis=3)
 
     def update_with_corrpMap(self, corrpMap):
+        """Add modality, cluster_averages_df, df"""
         self.mask_data = ''
         self.merged_skeleton_data_bin_sum = ''
         self.merged_skeleton_data_bin_mean = ''
 
+        # significant cluster mask
         self.sig_mask = np.where(
             corrpMap.corrp_data >= corrpMap.threshold, 1, 0)
 
         self.cluster_averages = get_average_for_each_volume(
-            self.merged_skeleton_data, self.sig_maskk)
+            self.merged_skeleton_data, self.sig_mask)
 
         # get a map with significant voxels
         self.modality = corrpMap.modality
@@ -90,9 +92,11 @@ class MergedSkeleton:
                      f'cluster {corrpMap.name}']
         )
 
+        # get a list of groups for each  volume
         group_list = corrpMap.matrix_df[corrpMap.group_cols].astype(
             'int').to_string(header=False, index=False).split('\n')
 
+        # data-frame for each subject
         self.df = pd.DataFrame({
             'subject': corrpMap.matrix_df.index,
             'mean': list(self.cluster_averages.values()),

@@ -143,18 +143,6 @@ class RandomiseRun:
         # define inputs
         self.location = Path(location)
 
-        # if matrix_file argument was not given, it would have
-        # been set as 'design.mat' --> make it into a full path
-        # if matrix_file:
-            # self.matrix_file = Path(matrix_file)
-            # self.get_matrix_info()
-
-        # if contrast_file argument was not given, it would have
-        # been set as 'design.con' --> make it into a full path
-        # if contrast_file:
-            # self.contrast_file = Path(contrast_file)
-            # self.get_contrast_info()
-            # self.get_contrast_info_english()
 
     def get_contrast_info(self):
         """Read design contrast file into a numpy array
