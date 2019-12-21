@@ -23,6 +23,19 @@ import argparse
 from itertools import combinations
 from stats import anova, ttest
 
+
+def get_average_for_each_volume(merged_skeleton_data, mask):
+    """Get average of values in the mask for each volume"""
+    cluster_averages = {}
+    # Get average of values in the `significant_cluster_data` map
+    # for each skeleton volume
+    for vol_num in np.arange(merged_skeleton_data.shape[3]):
+        vol_data = merged_skeleton_data[:, :, :, vol_num]
+        average = vol_data[mask == 1].mean()
+        cluster_averages[vol_num] = average
+    return cluster_averages
+
+
 class MergedSkeleton:
     """TBSS all_modality_skeleton map object"""
     def __init__(self, merged_skeleton_loc, template='enigma'):
@@ -61,19 +74,14 @@ class MergedSkeleton:
         self.merged_skeleton_data_bin_sum = ''
         self.merged_skeleton_data_bin_mean = ''
 
-        # get a map with significant voxels
-        self.modality = corrpMap.modality
-        significant_cluster_data = np.where(
+        self.sig_mask = np.where(
             corrpMap.corrp_data >= corrpMap.threshold, 1, 0)
 
-        self.sig_mask = significant_cluster_data
-        self.cluster_averages = {}
-        # Get average of values in the `significant_cluster_data` map
-        # for each skeleton volume
-        for vol_num in np.arange(self.merged_skeleton_data.shape[3]):
-            vol_data = self.merged_skeleton_data[:, :, :, vol_num]
-            average = vol_data[significant_cluster_data == 1].mean()
-            self.cluster_averages[vol_num] = average
+        self.cluster_averages = get_average_for_each_volume(
+            self.merged_skeleton_data, self.sig_maskk)
+
+        # get a map with significant voxels
+        self.modality = corrpMap.modality
 
         self.cluster_averages_df = pd.DataFrame.from_dict(
             self.cluster_averages,
@@ -90,8 +98,6 @@ class MergedSkeleton:
             'mean': list(self.cluster_averages.values()),
             'group': group_list
             })
-
-        # self.merged_skeleton_img.uncache()
 
     def skeleton_level_summary(self):
         """Summarize all skeleton
@@ -273,6 +279,7 @@ class SkeletonDir:
         - skeleton subject average as ahline
         - tests between subject averages between groups
         """
+        plt.style.use('default')
 
         self.g = sns.catplot(
                 x='group',
