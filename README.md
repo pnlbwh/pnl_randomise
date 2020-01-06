@@ -1,4 +1,8 @@
+![icon](docs/icon_20.png) 
+
 # FSL randomise related scripts
+
+Summarize and Visualize Information from FSL Randomise Outputs
 
 
 ## TODO
