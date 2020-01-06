@@ -49,33 +49,37 @@ def create_html(corrpMaps, df, args):
             os.stat(corrpMap.location)
         dates.append(time.strftime('%Y-%m-%d', time.localtime(mtime)))
         # print(time.strftime("%Y-%b-%d", time.ctime(mtime)))
-        if corrpMap.significant:
-            corrpMap.out_image_loc = re.sub(
-                '.nii.gz', '.png', str(corrpMap.location))
-            corrpMap.filled_out_image_loc = re.sub(
-                '.nii.gz', '_filled.png', str(corrpMap.location))
-            if Path(corrpMap.out_image_loc).is_file():
-                outfigures.append(True)
-            else:
-                outfigures.append(False)
+        # if corrpMap.significant:
 
-            if Path(corrpMap.filled_out_image_loc).is_file():
-                filled_outfigures.append(True)
-            else:
-                filled_outfigures.append(False)
+        corrpMap.out_image_loc = re.sub(
+            '.nii.gz', '.png', str(corrpMap.location))
+        corrpMap.filled_out_image_loc = re.sub(
+            '.nii.gz', '_filled.png', str(corrpMap.location))
+        if Path(corrpMap.out_image_loc).is_file():
+            print('there is pic')
+            outfigures.append(True)
+        else:
+            print('there is no pic')
+            outfigures.append(False)
 
-            corrpMap.sig_out_image_loc = re.sub(
-                '.nii.gz', '_sig_average_for_all_subjects.png',
-                str(corrpMap.location))
-            if Path(corrpMap.sig_out_image_loc).is_file():
-                outsigfigures.append(True)
-            else:
-                outsigfigures.append(False)
+        if Path(corrpMap.filled_out_image_loc).is_file():
+            filled_outfigures.append(True)
+        else:
+            filled_outfigures.append(False)
+
+        corrpMap.sig_out_image_loc = re.sub(
+            '.nii.gz', '_sig_average_for_all_subjects.png',
+            str(corrpMap.location))
+        if Path(corrpMap.sig_out_image_loc).is_file():
+            outsigfigures.append(True)
+        else:
+            outsigfigures.append(False)
 
         merged_4d_data_list.append(corrpMap.merged_4d_file)
         modality_list.append(corrpMap.modality)
 
     outfigures = all(outfigures)
+    print(outfigures)
     outsigfigures = all(outsigfigures)
     filled_outfigures = all(filled_outfigures)
 
