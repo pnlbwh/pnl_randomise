@@ -5,13 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="http://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet" media="screen">
     <style type="text/css">
-      .container {
+        .container {
         max-width: 500px;
         padding-top: 100px;
-      }
-      h2 {color: red;}
+        }
+
+        h2 {color: red;}
+
+        body {
+            padding-left: 2%;
+            padding-right: 2%;
+          }
+
     </style>
   </head>
+
   <body>
     <nav class="navbar navbar-inverse" role="navigation">
       <div class="container-fluid">
@@ -36,7 +44,7 @@
             <li class="dropdown">
               <a href="#" class="dropdown-toggle" data-toggle="dropdown">Dropdown <b class="caret"></b></a>
               <ul class="dropdown-menu">
-                <li><a href="#">Action</a></li>
+                <li><a href=https://github.com/pnlbwh/fsl_randomise target="_blank">script source</a></li>
                 <li><a href="#">Another action</a></li>
                 <li><a href="#">Something else here</a></li>
                 <li class="divider"></li>
@@ -47,6 +55,7 @@
         </div><!-- /.navbar-collapse -->
       </div><!-- /.container-fluid -->
     </nav>
+
     <div class="container-fluid">
       <h1>Psychiatry Neuroimaging Laboratory</h1>
       <h2>FSL Randomise summary</h2>
@@ -82,7 +91,7 @@
 
     {% block footer %}
       FSL randomise output summary by randomise_summary.py.
-      If you find an error, please report it to Kevin (kevincho@bwh.harvard.edu)
+      If you find an error, please report it to Kevin Cho (kevincho@bwh.harvard.edu)
     {% endblock %}
     </div>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">

@@ -56,10 +56,8 @@ def create_html(corrpMaps, df, args):
         corrpMap.filled_out_image_loc = re.sub(
             '.nii.gz', '_filled.png', str(corrpMap.location))
         if Path(corrpMap.out_image_loc).is_file():
-            print('there is pic')
             outfigures.append(True)
         else:
-            print('there is no pic')
             outfigures.append(False)
 
         if Path(corrpMap.filled_out_image_loc).is_file():
@@ -79,7 +77,6 @@ def create_html(corrpMaps, df, args):
         modality_list.append(corrpMap.modality)
 
     outfigures = all(outfigures)
-    print(outfigures)
     outsigfigures = all(outsigfigures)
     filled_outfigures = all(filled_outfigures)
 

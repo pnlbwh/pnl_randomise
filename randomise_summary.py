@@ -419,18 +419,15 @@ class CorrpMap(RandomiseRun):
 
         # Modality
         # modality must be included in its name
-        self.modality_full_list = ['FW', 'FA', 'FAt', 'FAc', 'FAk'
+        self.modality_full_list = ['FW', 'FA', 'FAt', 'FAc', 'FAk',
+                                   'iFW',
                                    'MK', 'MKc', 'MKk',
                                    'MD', 'MDt',
                                    'RD', 'RDt',
                                    'AD', 'ADt']
         try:
             self.modality = re.search(
-                r'.*(FW|FA|MD|RD|AD|MD|FAt|'
-                r'FAc|FAk|MK|MKc|MKk|MDt|RDt|ADt|MDt)_',
-                self.location.name).group(1)
-            self.modality = re.search(
-                '.*(' + '|'.join(self.modality_full_list) + ')_',
+                '.*_(' + '|'.join(self.modality_full_list) + ')_',
                 self.location.name).group(1)
         except AttributeError:
             print_head(f'No modality is detected in the file: {self.name}\n'
