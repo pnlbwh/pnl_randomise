@@ -45,8 +45,7 @@
               <a href="#" class="dropdown-toggle" data-toggle="dropdown">Dropdown <b class="caret"></b></a>
               <ul class="dropdown-menu">
                 <li><a href=https://github.com/pnlbwh/fsl_randomise target="_blank">script source</a></li>
-                <li><a href="#">Another action</a></li>
-                <li><a href="#">Something else here</a></li>
+                <li>{% block git %}{% endblock %} </li>
                 <li class="divider"></li>
                 <li><a href="#">Separated link</a></li>
               </ul>
@@ -58,6 +57,9 @@
 
     <div class="container-fluid">
       <h1>Psychiatry Neuroimaging Laboratory</h1>
+      <br>
+      <ul>Currently works the best with ENIGMA template</ul>
+
       <h2>FSL Randomise summary</h2>
       {% block subtitle %}{% endblock %}
       <br>
@@ -92,6 +94,7 @@
     {% block footer %}
       FSL randomise output summary by randomise_summary.py.
       If you find an error, please report it to Kevin Cho (kevincho@bwh.harvard.edu)
+      If you have modalities detected as 'unknown', please contact Kevin about it.
     {% endblock %}
     </div>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">

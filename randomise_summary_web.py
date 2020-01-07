@@ -28,6 +28,12 @@ def order_corrpMaps(corrpMaps):
 
 def create_html(corrpMaps, df, args):
     """Create html that summarizes randomise_summary.py outputs"""
+    # git version
+    command = 'git rev-parse HEAD'
+    script_dir = os.path.dirname(os.path.realpath(__file__))
+    os.chdir(script_dir)
+    git_hash = os.popen(command).read()
+
     corrpMaps = order_corrpMaps(corrpMaps)
     root = os.path.dirname(os.path.abspath(__file__))
     templates_dir = os.path.join(root, 'templates')
@@ -180,4 +186,5 @@ def create_html(corrpMaps, df, args):
             bin_sum_diff_figures=bin_sum_diff_figures,
             skel_vol_figures=skel_vol_figures,
             warped_map_figures=warped_map_figures,
+            githash=git_hash
         ))

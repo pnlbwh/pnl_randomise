@@ -1405,4 +1405,5 @@ The most simple way to use the script is
 
     if args.html_summary:
         create_html(corrp_map_classes, df, args)
-        print(corrpMap.location.parent / 'randomise_summary.html')
+        print(f'HTML summary is saved in '
+              f"{corrpMap.location.parent / 'randomise_summary.html'}")

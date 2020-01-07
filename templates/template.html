@@ -8,26 +8,30 @@
 <li class="active"><a href="#">html created using randomise_summary.py by {{ user }}</a></li>
 {% endblock %}
 
+{% block git %}
+<a href=https://github.com/pnlbwh/fsl_randomise/commit/{{ githash }} target="_blank">
+git hash used: <code>{{ githash }}</code></a>
+{% endblock %}
+
 {% block subtitle %}
-<h4>- Data location : {{ location }}</h4>
-<h4>- Owner of the files :
+<h4><ul>Data location : <code>{{ location }}</code></ul></h4>
+<h4><ul>Owner of the files :
     {% for creater in owners %}
-        {{ creater }}
+        <code>{{ creater }}</code>
     {% endfor %}
-</h4>
-<h4>- Corrected p maps were created on :
+</ul></h4>
+<h4><ul>Corrected p maps were created on :
     {% for datec in datecs %}
         {{ datec }}
     {% endfor %}
-</h4>
+</ul></h4>
 
 {% endblock %}
 
 {% block matrixsummary %}
     <h2>Matrix summary</h2>
-    <h4>Matrix file : {{ mat_location }}
-    <h4>Total number of subjects : {{ total_number_of_subjects }}
-    <br><br>
+    <h4><ul>Matrix file : <code>{{ mat_location }}</code></ul></h4>
+    <h4><ul>Total number of subjects : <code>{{ total_number_of_subjects }}</code></ul></h4>
     <div class="table-responsive">
     {{ mat_table|safe }}
     </div>
@@ -36,8 +40,7 @@
 
 {% block contrastsummary %}
     <h2>Contrast summary</h2>
-    <h4>Contrast file : {{ con_location }}
-    <br><br>
+    <h4><ul>Contrast file : <code>{{ con_location }}</code></ul></h4>
     <div class="table-responsive">
     {{ con_table|safe }}
     </div>
@@ -46,6 +49,7 @@
 
 {% block outputsummary %}
     <h2>Output corrected p-map summary</h2>
+    <ul>Please bear in mind that the FSL randomise p-values are 1-p values</ul>
     <div class="table-responsive">
     {{ table|safe }}
     </div>
