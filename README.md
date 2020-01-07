@@ -1,210 +1,117 @@
-# fsl_randomise
+![icon](docs/icon_20.png) 
 
-FSL randomise related scripts.
+# FSL randomise related scripts
 
+Summarize and Visualize Information from FSL Randomise Outputs
 
 
 ## TODO
-- Write a complete test for randomise_summary.py
+- Make a option to run `randomise_parallel_pnl` in environments without `bsub`
+- Write a complete test for `randomise_summary.py`
 - Write up contrast line translation functions for interaction effect
-
+- Add atlas query output to the html summary
 
 
 
 ## Scripts
-- `randomise_summary.py` : used to summarize FSL randomise outputs
-- `kcho_randomise_parallel` : runs FSL randomise in parallel using bsub
+1. `randomise_parallel_pnl` : runs FSL randomise in parallel using bsub
+2. `randomise_summary.py` : used to summarize FSL randomise outputs
 
 
+---
 
 
+## 1. `randomise_parallel_pnl`
 
-## `kcho_randomise_parallel`
 Dispatches `randomise_parallel` splited jobs through `bsub`.
 
 
 ### Dependencies
-- FSL
+
+```
+FSL
+bsub
+```
 
 
 ### Usage
 ```sh
-kcho_randomise_parallel -i <4D_input_data> -o <output_rootname> -d design.mat -t design.con -m <mask_image> -n 5000 -T2
+# same as fsl randomise
+randomise_parallel_pnl -i <4D_input_data> -o <output_rootname> -d design.mat -t design.con -m <mask_image> -n 5000 -T2
 ```
 
 
 
-
-
-## `randomise_summary.py`
+## 2. `randomise_summary.py`
 
 Summarize outputs from FSL randomise. 
+- design matrix
+- design contrast
 - p-values
-- percentage of significant voxels
-- design matrix summary
+- percentage of significant voxels (number of significant voxels / total number of voxels in the skeleton)
 - extract values for each subject in the significant cluster
-
-
+- create html summary
 
 
 ### Dependencies
-- python 3
-- nibabel
-- pandas
-- numpy
-- tabulate
-
-
-
-
-### Example output
 
 ```
-/data/pnl/kcho/PNLBWH/fsl_randomise/test_tbss/stats None None
-
---------------------------------------------------------------------------------
-* Matrix summary
---------------------------------------------------------------------------------
-/data/pnl/kcho/PNLBWH/fsl_randomise/test_tbss/stats
-/data/pnl/kcho/PNLBWH/fsl_randomise/test_tbss/stats/design.con
-/data/pnl/kcho/PNLBWH/fsl_randomise/test_tbss/stats/design.mat
-total number of data point : 4
-Group columns are : col 0, col 1
-+--------+---------+---------+---------+-------------+
-|        | col 0   | col 1   | col 2   | col 3       |
-|--------+---------+---------+---------+-------------|
-| mean   | 0.0     | 1.0     | 0.75    | 26.75       |
-| std    | 0.0     | 0.0     | 0.5     | 7.23        |
-| min    | 0.0     | 1.0     | 0.0     | 20.0        |
-| max    | 0.0     | 1.0     | 1.0     | 37.0        |
-| unique | Group 1 | Group 2 | 0. 1.   | 20. 25. 37. |
-| count  | 0       | 4       | 1 3     | 1 2 1       |
-+--------+---------+---------+---------+-------------+
-
-There are voxels with p value between 0.9495 and 0.05. These numbers are rounded up in FSL to 0.95. Threfore to match to the FSL outputs, changing the threshold to (threshold - 0.00001)
-
---------------------------------------------------------------------------------
-* Values extracted for each subject
---------------------------------------------------------------------------------
--------------------------------------------------------------------------------
-tbss_FW_tfce_corrp_tstat1.nii.gz
-+-----------+-------------------------------------------------------------------------+---------+---------+---------+---------+
-|           |   FW values in the significant cluster tbss_FW_tfce_corrp_tstat1.nii.gz |   col 0 |   col 1 |   col 2 |   col 3 |
-|-----------+-------------------------------------------------------------------------+---------+---------+---------+---------|
-| subject 1 |                                                               0.0785187 |       0 |       1 |       1 |      25 |
-| subject 2 |                                                               0.10789   |       0 |       1 |       1 |      25 |
-| subject 3 |                                                               0.123824  |       0 |       1 |       0 |      37 |
-| subject 4 |                                                               0.124727  |       0 |       1 |       1 |      20 |
-+-----------+-------------------------------------------------------------------------+---------+---------+---------+---------+
-/data/pnl/kcho/PNLBWH/fsl_randomise/test_tbss/stats/values_extracted_for_all_subjects.csv is created.
-
-
---------------------------------------------------------------------------------
-* Result summary
---------------------------------------------------------------------------------
-+----------------------------------+-----------------+-------------------+--------+------------+------------+----------------+-----------+-------------+--------------+------------------------+----------+-----------+
-| file name                        | contrast        | contrast_text     | Test   | Modality   |   Stat num | Significance   |   Sig Max |    Sig Mean |      Sig Std |   % significant voxels |   % left |   % right |
-|----------------------------------+-----------------+-------------------+--------+------------+------------+----------------+-----------+-------------+--------------+------------------------+----------+-----------|
-| tbss_FW_tfce_corrp_tstat1.nii.gz | 1. -1.  0.  0.  | Group 1 > Group 2 | t      | FW         |          1 | True           |    0.9886 |   0.0336064 |   0.00899722 |                   22.6 |       22 |      28.4 |
-| tbss_FW_tfce_corrp_tstat2.nii.gz | -1.  1.  0.  0. | Group 1 < Group 2 | t      | FW         |          2 | False          |    0.0536 | nan         | nan          |                  nan   |      nan |     nan   |
-+----------------------------------+-----------------+-------------------+--------+------------+------------+----------------+-----------+-------------+--------------+------------------------+----------+-----------+
-
-
---------------------------------------------------------------------------------
-* Atlas query of the significant cluster
---------------------------------------------------------------------------------
-+----+----------------------------------+------------------------------------------+---------+----------+----------+----------+
-|    | file_name                        | Structure                                | atlas   |        L |        M |        R |
-|----+----------------------------------+------------------------------------------+---------+----------+----------+----------|
-|  0 | tbss_FW_tfce_corrp_tstat1.nii.gz | Anterior corona radiata                  | Labels  |   3.0888 | nan      |   4.909  |
-|  1 | tbss_FW_tfce_corrp_tstat1.nii.gz | Anterior limb of internal capsule        | Labels  |   1.6547 | nan      |   0.3861 |
-|  3 | tbss_FW_tfce_corrp_tstat1.nii.gz | Body of corpus callosum                  | Labels  | nan      |   7.4462 | nan      |
-|  6 | tbss_FW_tfce_corrp_tstat1.nii.gz | External capsule                         | Labels  |   0.6619 | nan      |   1.048  |
-|  9 | tbss_FW_tfce_corrp_tstat1.nii.gz | Genu of corpus callosum                  | Labels  | nan      |   6.1224 | nan      |
-| 12 | tbss_FW_tfce_corrp_tstat1.nii.gz | Posterior corona radiata                 | Labels  |   1.8753 | nan      |   2.096  |
-| 13 | tbss_FW_tfce_corrp_tstat1.nii.gz | Posterior limb of internal capsule       | Labels  |   0.6619 | nan      |   0.8825 |
-| 14 | tbss_FW_tfce_corrp_tstat1.nii.gz | Posterior thalamic radiation             | Labels  |   1.6547 | nan      |   2.813  |
-| 15 | tbss_FW_tfce_corrp_tstat1.nii.gz | Retrolenticular part of internal capsule | Labels  | nan      | nan      |   1.3789 |
-| 16 | tbss_FW_tfce_corrp_tstat1.nii.gz | Sagittal stratum                         | Labels  | nan      | nan      |   1.5996 |
-| 17 | tbss_FW_tfce_corrp_tstat1.nii.gz | Splenium of corpus callosum              | Labels  | nan      |  11.0866 | nan      |
-| 18 | tbss_FW_tfce_corrp_tstat1.nii.gz | Superior corona radiata                  | Labels  |   0.1655 | nan      |   0.717  |
-| 19 | tbss_FW_tfce_corrp_tstat1.nii.gz | Superior fronto-occipital fasciculus     | Labels  |   0.2206 | nan      | nan      |
-| 20 | tbss_FW_tfce_corrp_tstat1.nii.gz | Superior longitudinal fasciculus         | Labels  |   4.6332 | nan      |   2.3718 |
-| 22 | tbss_FW_tfce_corrp_tstat1.nii.gz | Tapetum                                  | Labels  |   0.2758 | nan      |   0.2206 |
-| 24 | tbss_FW_tfce_corrp_tstat1.nii.gz | Unclassified                             | Labels  | nan      |  42.0298 | nan      |
-+----+----------------------------------+------------------------------------------+---------+----------+----------+----------+
-
-
+FSL
+python 3
+nibabel
+pandas
+numpy
+tabulate
+Path
+tempfile
+nifti_snapshot 
+jinja2
+os
+getpass
+getpwuid
 ```
-
-
-![image_created_by_randomise_summary.py](test_tbss/stats/tbss_FW_tfce_corrp_tstat1.png)
-
-
-
 
 
 ### Usage
 
 
 
-> Simplest use
 
-It automatically finds `design.mat` and `design.con` in the current directory,
-along with `*corrp*nii.gz` images when ran without any options.
+#### Simple use
+
+##### If I were you, I wouldn't read all of documentation below. Just try runing below
 
 ```sh
-cd RANDOMISE/LOCATION/stats
-randomise_summary.py
+# path where tbss_*corrp_tstat*nii.gz
+cd /TBSS/STAT/DIR
+randomise_summary.py 
+
+# It automatically finds `design.mat` and `design.con` in the current directory,
+# along with `*corrp*nii.gz` images when ran without any options.
 ```
 
 
-
-> Individual `*corrp*nii.gz`
-
-Also individual `*corrp*nii.gz` images, `design.mat` and `design.con` in 
+Individual `*corrp*nii.gz` images, `design.mat` and `design.con` in 
 different location could be specified with options.
 
-```sh
-randomise_summary.py -i stats/tbss_corrp_tstat1.nii.gz
-
-# you can also specify design matrices if they have different naming
-randomise_summary.py -i stats/tbss_corrp_tstat1.nii.gz \
-                     -d stats/this_is_design_file.mat \
-                     -c stats/this_is_contrast_file.mat \
-
+```
+randomise_summary.py --constrat design.con --matrix design.mat
+randomise_summary.py --input tbss_FA_corrp_tstat1.nii.gz
 ```
 
 
-
-
-> Control p-value threshold
-
-The p-value for significance could be altered, if higher threshold is rquired
-by adding extra option `-t` or `--threshold`
+##### Control p-value threshold
+The p-value for defining significance could be altered by adding extra option `-t` or `--threshold`
 
 ```sh
 randomise_summary.py -t 0.99
 ```
 
+#### More advanced use
 
+##### Extract values for the significant cluster in each subject
 
-
-> Run FSL's atlas query with the significant cluster
-
-FSL's atlas query returns information about the location of the cluster. If
-`-a` or `--atlas` option is given, the script will run atlas query on the 
-significant cluster and print the summarized output on screen
-
-```sh
-randomise_summary.py -a
-```
-
-
-
-> Extract values for the significant cluster in each subject
-
-It is a common practice to look at the correlation between the values of each
+It is a common practice to look at correlations between the mean values of each
 subject in the significant cluster and their clinical scales.  Simply add `--subject_values` option for this.
 
 ```sh
@@ -219,36 +126,145 @@ randomise_summary.py --subject_values \
                      --merged_img_dir /DIRECTORY/WITH/all_4D_skeleton.nii.gz
 ```
 
+##### more options
+
+```sh
+randomise_summary.py --sig_only
+randomise_summary.py --figure
+randomise_summary.py --atlasquery
+randomise_summary.py --tbss_fill 
+randomise_summary.py --subject_values
+randomise_summary.py --skeleton_summary 
+randomise_summary.py --skeleton_summary --tbss_all_loc ${tbss_all_out_dir} --html_summary
+```
+
+#### What I would use
+
+```sh
+randomise_summary.py 
+randomise_summary.py \
+    --figure \
+    --tbss_fill \
+    --subject_values \
+    --skeleton_summary \
+    --tbss_all_loc /TBSS/ALL/DIR \
+    --html_summary
+google-chrome randomise_summary.html
+```
 
 
-> Create png file -- **under development : link kcho_figure.py**
+### Example outputs
+
+#### simple run
+```sh
+randomise_summary.py
+```
+
+```
+Importing modules
+Importing modules complete
+
+--------------------------------------------------------------------------------
+* Summarizing information for files below
+--------------------------------------------------------------------------------
+	/data/pnl/kcho/tbss_example/enigma-tbss/stats/precompute_1_randomise/tbss_FW_tfce_corrp_tstat1.nii.gz
+	/data/pnl/kcho/tbss_example/enigma-tbss/stats/precompute_1_randomise/tbss_FW_tfce_corrp_tstat2.nii.gz
+	/data/pnl/kcho/tbss_example/enigma-tbss/stats/precompute_1_randomise/tbss_FAt_tfce_corrp_tstat1.nii.gz
+	/data/pnl/kcho/tbss_example/enigma-tbss/stats/precompute_1_randomise/tbss_FAt_tfce_corrp_tstat2.nii.gz
+	/data/pnl/kcho/tbss_example/enigma-tbss/stats/precompute_1_randomise/tbss_FA_tfce_corrp_tstat1.nii.gz
+	/data/pnl/kcho/tbss_example/enigma-tbss/stats/precompute_1_randomise/tbss_FA_tfce_corrp_tstat2.nii.gz
+
+--------------------------------------------------------------------------------
+* Matrix summary
+--------------------------------------------------------------------------------
+Contrast file : design.con
+Matrix file : design.mat
+
+total number of data point : 135
+Group columns are : col 1, col 2
++---------------+---------+---------+--------------------------------------------------------------------------+
+|               | col 1   | col 2   | col 3                                                                    |
+|---------------+---------+---------+--------------------------------------------------------------------------|
+| mean          | 0.39    | 0.61    | 35.81                                                                    |
+| std           | 0.49    | 0.49    | 11.21                                                                    |
+| min           | 0.0     | 0.0     | 18.0                                                                     |
+| max           | 1.0     | 1.0     | 63.0                                                                     |
+| unique values | 0. 1.   | 0. 1.   | 18. 19. 20. 21. 22. 23. 24. 25. 26. 27. 28. 29. 30. 31. 32. 33. 34. 35.  |
+|               |         |         |  36. 37. 38. 39. 40. 41. 42. 43. 44. 45. 46. 47. 49. 51. 52. 53. 55. 56. |
+|               |         |         |  57. 59. 60. 63.                                                         |
+| count         | 53      | 82      | 2  2  3  7  1  4  3  7  3  2  5 11  3  3  4  3  2  6  6  4  3  7  2  2   |
+|               |         |         |   2  4  5  2  3  3  1  4  2  2  2  4  2  1  1  2                         |
+| column info   | Group 1 | Group 2 | nan                                                                      |
++---------------+---------+---------+--------------------------------------------------------------------------+
+
+
+--------------------------------------------------------------------------------
+* Result summary
+--------------------------------------------------------------------------------
++-----------------------------------+-------------+-------------------+--------+------------+----------------+-----------+-------------+--------------+------------------------+----------+-----------+
+| file name                         | contrast    | contrast_text     | Test   | Modality   | Significance   |   Sig Max |    Sig Mean |      Sig Std |   % significant voxels |   % left |   % right |
+|-----------------------------------+-------------+-------------------+--------+------------+----------------+-----------+-------------+--------------+------------------------+----------+-----------|
+| tbss_FA_tfce_corrp_tstat1.nii.gz  | 1. -1.  0.  | Group 1 > Group 2 | t      | FA         | True           |  0.994951 |   0.017583  |   0.00962737 |                   22.4 |     12   |      10.4 |
+| tbss_FA_tfce_corrp_tstat2.nii.gz  | -1.  1.  0. | Group 1 < Group 2 | t      | FA         | False          |  0.356494 | nan         | nan          |                  nan   |    nan   |     nan   |
+| tbss_FAt_tfce_corrp_tstat1.nii.gz | 1. -1.  0.  | Group 1 > Group 2 | t      | FAt        | True           |  0.991517 |   0.0251597 |   0.0122004  |                    6.1 |      3   |       3   |
+| tbss_FAt_tfce_corrp_tstat2.nii.gz | -1.  1.  0. | Group 1 < Group 2 | t      | FAt        | False          |  0.244799 | nan         | nan          |                  nan   |    nan   |     nan   |
+| tbss_FW_tfce_corrp_tstat1.nii.gz  | 1. -1.  0.  | Group 1 > Group 2 | t      | FW         | False          |  0.147445 | nan         | nan          |                  nan   |    nan   |     nan   |
+| tbss_FW_tfce_corrp_tstat2.nii.gz  | -1.  1.  0. | Group 1 < Group 2 | t      | FW         | True           |  0.977782 |   0.0396292 |   0.00816982 |                    3.9 |      2.2 |       1.7 |
++-----------------------------------+-------------+-------------------+--------+------------+----------------+-----------+-------------+--------------+------------------------+----------+-----------+
+
+```
+
+
+#### Figure 
 
 ```sh
 randomise_summary.py --figure
 ```
 
+<img src="test_tbss/stats_real/tbss_FA_tfce_corrp_tstat1.png" width="400"></img>
+<img src="test_tbss/stats_real/tbss_FAt_tfce_corrp_tstat1.png" width="400"></img>
+<img src="test_tbss/stats_real/tbss_FW_tfce_corrp_tstat2.png" width="400"></img>
 
 
+#### `tbss_fill` Figure 
 
-> All options
+```sh
+randomise_summary.py --tbss_fill
+```
+
+<img src="test_tbss/stats_real/tbss_FA_tfce_corrp_tstat1_filled.png" width="400"></img>
+<img src="test_tbss/stats_real/tbss_FAt_tfce_corrp_tstat1_filled.png" width="400"></img>
+<img src="test_tbss/stats_real/tbss_FW_tfce_corrp_tstat2_filled.png" width="400"></img>
+
+
+#### All options
 
 ```sh
 usage: randomise_summary.py [-h] [--directory DIRECTORY]
                             [--input INPUT [INPUT ...]]
                             [--threshold THRESHOLD] [--contrast CONTRAST]
-                            [--matrix MATRIX] [--subject_values]
-                            [--merged_img_dir MERGED_IMG_DIR] [--atlasquery]
-                            [--figure]
+                            [--matrix MATRIX] [--template TEMPLATE]
+                            [--subject_values] [--cov_info] [--sig_only]
+                            [--f_only] [--merged_img_dir MERGED_IMG_DIR]
+                            [--merged_image MERGED_IMAGE] [--atlasquery]
+                            [--figure] [--tbss_fill] [--skeleton_summary]
+                            [--tbss_all_loc TBSS_ALL_LOC] [--html_summary]
 
-        randomise_summary.py --dir /example/randomise/output/dir/
-        
+The most simple way to use the script is
+  cd stats
+  ls
+    all_FA_skeleton.nii.gz
+    tbss_FA_tfce_corrp_tstat1.nii.gz
+    tbss_FA_tfce_corrp_tstat2.nii.gz
+    design.mat
+    design.con
+  randomise_summary.py
+
 
 optional arguments:
   -h, --help            show this help message and exit
   --directory DIRECTORY, -d DIRECTORY
-                        Specify randomise out dir. This this option is given,
-                        design.mat and design.con within the directory are
-                        read by default.
+                        Specify randomise out directory.
   --input INPUT [INPUT ...], -i INPUT [INPUT ...]
                         Specify randomise out corrp files. If this option is
                         given, --directory input is ignored
@@ -258,23 +274,35 @@ optional arguments:
                         Contrast file used for the randomise.
   --matrix MATRIX, -m MATRIX
                         Matrix file used for the randomise
+  --template TEMPLATE, -template TEMPLATE
+                        FA template used (or created) in TBSS
   --subject_values, -s  Print average in the significant cluster for all
                         subjects
-  --merged_img_dir MERGED_IMG_DIR, -p MERGED_IMG_DIR
+  --cov_info, -ci       Print covariate information for each group
+  --sig_only, -so       Print only the significant statistics
+  --f_only, -fo         Print only the output from f-test
+  --merged_img_dir MERGED_IMG_DIR, -merged_image_d MERGED_IMG_DIR
+                        Directory that contains merged files
+  --merged_image MERGED_IMAGE, -merged_image MERGED_IMAGE
                         Directory that contains merged files
   --atlasquery, -a      Run atlas query on significant corrp files
   --figure, -f          Create figures
+  --tbss_fill, -tf      Create figures with tbss_fill outputs
+  --skeleton_summary, -ss
+                        Create summary from all skeleton and also figures from
+                        merged_skeleton_images
+  --tbss_all_loc TBSS_ALL_LOC, -tal TBSS_ALL_LOC
+                        tbss_all output path
+  --html_summary, -hs   Create web summary from the randomise outputs
 
 Kevin Cho Thursday, August 22, 2019
 ```
 
 
-
-
 ### Test using `test_randomise_summary.py`
 
 ```sh
-python test_randomise_summary.py
+test_randomise_summary.py
 ```
 
 Above script checks for whether 

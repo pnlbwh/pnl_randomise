@@ -49,6 +49,67 @@ TODO:
 '''
 
 
+def get_corrp_map_locs(args):
+    # Get information from individual corrp files
+    if args.input:
+        corrp_map_locs = args.input
+
+    # If args.input is not given, get a list of corrp files from the given
+    # randomise directory
+    else:
+        # this part reads information from design matrix and contrast
+        randomiseRun = RandomiseRun(args.directory,
+                                    matrix_file=args.matrix,
+                                    contrast_file=args.contrast)
+
+        # load list of corrp files
+        if args.f_only:
+            randomiseRun.get_corrp_files_glob_string('*corrp_f*.nii.gz')
+        else:
+            randomiseRun.get_corrp_files()
+        corrp_map_locs = randomiseRun.corrp_ps
+
+    return corrp_map_locs
+
+
+def get_corrp_map_classes(corrp_map_locs, args):
+    # get corrpMap information
+    print_head('Summarizing information for files below')
+    corrp_map_classes = []
+
+    # set caselist as empty string if the caselist is not given
+    if args.caselist:
+        caselist = args.caselist
+    else:
+        caselist = ''
+
+    for corrp_map_loc in corrp_map_locs:
+        print(f'\t{corrp_map_loc}')
+        if args.merged_img_dir:
+            corrpMap = CorrpMap(corrp_map_loc,
+                                threshold=args.threshold,
+                                contrast_file=args.contrast,
+                                matrix_file=args.matrix,
+                                merged_img_dir=args.merged_img_dir,
+                                caselist=caselist)
+        else:
+            corrpMap = CorrpMap(corrp_map_loc,
+                                threshold=args.threshold,
+                                contrast_file=args.contrast,
+                                matrix_file=args.matrix,
+                                caselist=caselist)
+
+        corrp_map_classes.append(corrpMap)
+
+    # if no corrpMap is defined
+    try:
+        corrpMap
+    except NameError:
+        sys.exit('Please check there is corrp file')
+
+    return corrp_map_classes
+
+
 class RandomiseRun:
     """Randomise output class
 
@@ -82,18 +143,6 @@ class RandomiseRun:
         # define inputs
         self.location = Path(location)
 
-        # if matrix_file argument was not given, it would have
-        # been set as 'design.mat' --> make it into a full path
-        # if matrix_file:
-            # self.matrix_file = Path(matrix_file)
-            # self.get_matrix_info()
-
-        # if contrast_file argument was not given, it would have
-        # been set as 'design.con' --> make it into a full path
-        # if contrast_file:
-            # self.contrast_file = Path(contrast_file)
-            # self.get_contrast_info()
-            # self.get_contrast_info_english()
 
     def get_contrast_info(self):
         """Read design contrast file into a numpy array
@@ -347,6 +396,15 @@ class CorrpMap(RandomiseRun):
         self.contrast_file = contrast_file
         self.matrix_file = matrix_file
 
+        # if caselist is given
+        # in `get_corrp_map_classes`, '' is given as the caselist
+        # when there is no caelist is given to the randomise_summary.py
+        if 'caselist' in kwargs:
+            caselist = kwargs.get('caselist')
+            if Path(caselist).is_file():
+                with open(caselist, 'r') as f:
+                    self.caselist = [x.strip() for x in f.readlines]
+
         if not Path(self.contrast_file).is_file():
             self.contrast_file = search_and_select_one(
                     'contrast_file',
@@ -361,18 +419,15 @@ class CorrpMap(RandomiseRun):
 
         # Modality
         # modality must be included in its name
-        self.modality_full_list = ['FW', 'FA', 'FAt', 'FAc', 'FAk'
+        self.modality_full_list = ['FW', 'FA', 'FAt', 'FAc', 'FAk',
+                                   'iFW',
                                    'MK', 'MKc', 'MKk',
                                    'MD', 'MDt',
                                    'RD', 'RDt',
                                    'AD', 'ADt']
         try:
             self.modality = re.search(
-                r'.*(FW|FA|MD|RD|AD|MD|FAt|'
-                r'FAc|FAk|MK|MKc|MKk|MDt|RDt|ADt|MDt)_',
-                self.location.name).group(1)
-            self.modality = re.search(
-                '.*(' + '|'.join(self.modality_full_list) + ')_',
+                '.*_(' + '|'.join(self.modality_full_list) + ')_',
                 self.location.name).group(1)
         except AttributeError:
             print_head(f'No modality is detected in the file: {self.name}\n'
@@ -1091,7 +1146,7 @@ The most simple way to use the script is
     design.mat
     design.con
   randomise_summary.py
-        ''', epilog="Kevin Cho Thursday, August 22, 2019")
+        ''', epilog="Kevin Cho 21st December 2019")
 
     argparser.add_argument(
         "--directory", "-d",
@@ -1099,141 +1154,101 @@ The most simple way to use the script is
         help='Specify randomise out directory.',
         default=os.getcwd())
 
-    argparser.add_argument("--input", "-i",
-                           type=str,
-                           nargs='+',
-                           help='Specify randomise out corrp files. If this \
-                           option is given, --directory input is ignored')
+    argparser.add_argument(
+        "--input", "-i", type=str, nargs='+',
+        help='Specify randomise out corrp files. If this option is given, '
+             '--directory input is ignored')
 
-    argparser.add_argument("--threshold", "-t",
-                           type=float,
-                           help='Threshold for the significance',
-                           default=0.95)
+    argparser.add_argument(
+        "--threshold", "-t", type=float, default=0.95,
+        help='Threshold for the significance')
 
-    argparser.add_argument("--contrast", "-c",
-                           type=str,
-                           default='design.con',
-                           help='Contrast file used for the randomise.')
+    argparser.add_argument(
+        "--contrast", "-c", type=str, default='design.con',
+        help='Contrast file used for the randomise.')
 
-    argparser.add_argument("--matrix", "-m",
-                           type=str,
-                           default='design.mat',
-                           help='Matrix file used for the randomise')
+    argparser.add_argument(
+        "--matrix", "-m", type=str, default='design.mat',
+        help='Matrix file used for the randomise')
 
-    argparser.add_argument("--template", "-template",
-                           type=str,
-                           default='enigma',
-                           help='FA template used (or created) in TBSS')
+    argparser.add_argument(
+        "--template", "-template", type=str, default='enigma',
+        help='FA template used (or created) in TBSS')
 
-    argparser.add_argument("--subject_values", "-s",
-                           action='store_true',
-                           help='Print average in the significant cluster for \
-                           all subjects')
+    argparser.add_argument(
+        "--subject_values", "-s", action='store_true',
+        help='Print average in the significant cluster for all subjects')
 
-    argparser.add_argument("--cov_info", "-ci",
-                           action='store_true',
-                           help='Print covariate information for each group')
+    argparser.add_argument(
+        "--cov_info", "-ci", action='store_true',
+        help='Print covariate information for each group')
 
-    argparser.add_argument("--sig_only", "-so",
-                           action='store_true',
-                           help='Print only the significant statistics')
+    argparser.add_argument(
+        "--sig_only", "-so", action='store_true',
+        help='Print only the significant statistics')
 
-    argparser.add_argument("--f_only", "-fo",
-                           action='store_true',
-                           help='Print only the output from f-test')
+    argparser.add_argument(
+        "--f_only", "-fo", action='store_true',
+        help='Print only the output from f-test')
 
-    argparser.add_argument("--merged_img_dir", "-merged_image_d",
-                           type=str,
-                           help='Directory that contains merged files')
+    argparser.add_argument(
+        "--merged_img_dir", "-merged_image_d", type=str,
+        help='Directory that contains merged files')
 
-    argparser.add_argument("--merged_image", "-merged_image",
-                           type=str,
-                           help='Directory that contains merged files')
+    argparser.add_argument(
+        "--merged_image", "-merged_image", type=str,
+        help='Directory that contains merged files')
 
-    argparser.add_argument("--atlasquery", "-a",
-                           action='store_true',
-                           help='Run atlas query on significant corrp files')
+    argparser.add_argument(
+        "--atlasquery", "-a", action='store_true',
+        help='Run atlas query on significant corrp files')
 
-    argparser.add_argument("--figure", "-f",
-                           action='store_true',
-                           help='Create figures')
+    argparser.add_argument(
+        "--figure", "-f", action='store_true', help='Create figures')
 
-    argparser.add_argument("--tbss_fill", "-tf",
-                           action='store_true',
-                           help='Create figures with tbss_fill outputs')
+    argparser.add_argument(
+        "--tbss_fill", "-tf", action='store_true',
+        help='Create figures with tbss_fill outputs')
 
-    argparser.add_argument("--skeleton_summary", "-ss",
-                           action='store_true',
-                           help='Create summary from all skeleton and also '
-                                'figures from merged_skeleton_images')
+    argparser.add_argument(
+        "--skeleton_summary", "-ss", action='store_true',
+        help='Create summary from all skeleton and also figures from '
+             'merged_skeleton_images')
 
-    argparser.add_argument("--tbss_all_loc", "-tal",
-                           type=str,
-                           help='tbss_all output path')
+    argparser.add_argument(
+        "--caselist", "-caselist", type=str,
+        help='caselist file used to run the tbss')
 
-    argparser.add_argument("--html_summary", "-hs",
-                           action='store_true',
-                           help='Create web summary from the randomise '
-                                'outputs')
+    argparser.add_argument(
+        "--tbss_all_loc", "-tal", type=str, help='tbss_all output path')
+
+    argparser.add_argument(
+        "--html_summary", "-hs", action='store_true',
+        help='Create web summary from the randomise outputs')
+
     args = argparser.parse_args()
 
-    # Get information from individual corrp files
-    if args.input:
-        corrp_map_locs = args.input
+    # get a list of corrp map paths based on the arg parse inputs
+    corrp_map_locs = get_corrp_map_locs(args)
 
-    # If args.input is not given, get a list of corrp files from the given 
-    # randomise directory
-    else:
-        # this part reads information from design matrix and contrast
-        randomiseRun = RandomiseRun(args.directory,
-                                    matrix_file=args.matrix,
-                                    contrast_file=args.contrast)
+    # get a list of corrpMap objects
+    corrp_map_classes = get_corrp_map_classes(corrp_map_locs, args)
 
-        # load list of corrp files
-        if args.f_only:
-            randomiseRun.get_corrp_files_glob_string('*corrp_f*.nii.gz')
-        else:
-            randomiseRun.get_corrp_files()
-        corrp_map_locs = randomiseRun.corrp_ps
-
-    # get corrpMap information
-    print_head('Summarizing information for files below')
-    corrp_map_classes = []
-    for corrp_map_loc in corrp_map_locs:
-        print(f'\t{corrp_map_loc}')
-        if args.merged_img_dir:
-            corrpMap = CorrpMap(corrp_map_loc,
-                                threshold=args.threshold,
-                                contrast_file=args.contrast,
-                                matrix_file=args.matrix,
-                                merged_img_dir=args.merged_img_dir)
-        else:
-            corrpMap = CorrpMap(corrp_map_loc,
-                                threshold=args.threshold,
-                                contrast_file=args.contrast,
-                                matrix_file=args.matrix)
-        corrp_map_classes.append(corrpMap)
-
-    # if no corrpMap is defined
-    try:
-        corrpMap
-    except NameError:
-        sys.exit('Please check there is corrp file')
-
-    # print matrix information
+    # print matrix information of a corrpMap assuming all of corrpMaps have
+    # the same matrix and contrast
+    corrpMap = corrp_map_classes[0]
     corrpMap.print_matrix_info()
+
+    # TODO: move this to html summary
     if args.cov_info and hasattr(corrpMap, 'covar_info_dict'):
         print_head('Covariate summary')
         for col, table in corrpMap.covar_info_dict.items():
             print(col)
             print_df(table)
 
-
-
-    # printing result summary
+    print_head('Result summary')
     df = pd.concat([x.df for x in corrp_map_classes], sort=False)
     df = df.sort_values('file name')
-    print_head('Result summary')
     if args.sig_only:
         print_head('Only showing significant maps')
         try:
@@ -1271,6 +1286,7 @@ The most simple way to use the script is
                     corrpMap.get_figure()
                 plt.close()
 
+    # TODO : check the structure below
     # if merged image location is not given
     if not args.merged_img_dir:
         if args.subject_values or args.skeleton_summary:
@@ -1285,7 +1301,6 @@ The most simple way to use the script is
         modal_ms_dict = {}
         all_modalities = [x.modality for x in corrp_map_classes
                           if x.significant]
-        print(all_modalities)
         for corrpMap in corrp_map_classes:
             if corrpMap.significant:
                 if corrpMap.modality in modal_ms_dict.keys():
@@ -1305,7 +1320,6 @@ The most simple way to use the script is
                     axis=1)
 
                 # cluster average figure
-                plt.style.use('default')
                 SkeletonDirSig.get_group_figure(mergedSkeleton)
                 mergedSkeleton.g.ax.set_title(
                     f'Average {corrpMap.modality} in the significant cluster '
@@ -1322,7 +1336,7 @@ The most simple way to use the script is
                 print(out_image_loc)
                 plt.close()
                 mergedSkeleton = ''
-        
+
         # if any of corrp map had significant voxels
         out_csv_name = 'values_extracted_for_all_subjects.csv'
 
@@ -1332,7 +1346,7 @@ The most simple way to use the script is
 
         try:
             values_df = pd.concat([values_df,
-                                   randomiseRun.matrix_df],
+                                   corrpMap.matrix_df],
                                   axis=1)
             values_df.to_csv(out_csv)
             print(f'{out_csv} is created.')
@@ -1392,18 +1406,3 @@ The most simple way to use the script is
     if args.html_summary:
         create_html(corrp_map_classes, df, args)
         print(corrpMap.location.parent / 'randomise_summary.html')
-        # run.web(corrp_map_classes, values_df, df)
-
-        # # If overlap option is on
-        # if args.overlap and len(args.input) == 2:
-            # tbssFigure = nifti_snapshot.TbssFigure(
-                # image_files=args.input,
-                # output_file=args.output_file,
-                # cmap_list=args.cmap,
-                # overlap_cmap=args.overlap_cmap,
-                # cbar_titles=args.cbar_title,
-                # alpha_list=[1, 1]+[args.overlap_alpha],
-                # title=args.title)
-
-            # tbssFigure.create_figure_two_maps_and_overlap()
-
