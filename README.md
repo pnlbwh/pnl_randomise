@@ -2,6 +2,10 @@
 
 # FSL randomise related scripts
 
+
+[![DOI](https://zenodo.org/badge/209407534.svg)](https://zenodo.org/badge/latestdoi/209407534)
+
+
 Summarize and Visualize Information from FSL Randomise Outputs
 
 
