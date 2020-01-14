@@ -61,6 +61,7 @@ def create_html(corrpMaps, df, args):
             '.nii.gz', '.png', str(corrpMap.location))
         corrpMap.filled_out_image_loc = re.sub(
             '.nii.gz', '_filled.png', str(corrpMap.location))
+
         if Path(corrpMap.out_image_loc).is_file():
             outfigures.append(True)
         else:
@@ -82,9 +83,9 @@ def create_html(corrpMaps, df, args):
         merged_4d_data_list.append(corrpMap.merged_4d_file)
         modality_list.append(corrpMap.modality)
 
-    outfigures = all(outfigures)
-    outsigfigures = all(outsigfigures)
-    filled_outfigures = all(filled_outfigures)
+    outfigures = any(outfigures)
+    outsigfigures = any(outsigfigures)
+    filled_outfigures = any(filled_outfigures)
 
     file_owners = list(set(file_owners))
     datecs = list(set(dates))

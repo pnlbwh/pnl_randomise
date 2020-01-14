@@ -403,7 +403,7 @@ class CorrpMap(RandomiseRun):
             caselist = kwargs.get('caselist')
             if Path(caselist).is_file():
                 with open(caselist, 'r') as f:
-                    self.caselist = [x.strip() for x in f.readlines]
+                    self.caselist = [x.strip() for x in f.readlines()]
 
         if not Path(self.contrast_file).is_file():
             self.contrast_file = search_and_select_one(
