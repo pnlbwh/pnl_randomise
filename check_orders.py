@@ -5,6 +5,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import argparse
+import sys
 
 """
 This script is used to compare the order of 3d skeletons in the merged 4d
@@ -74,6 +75,8 @@ class MergedData:
             with open(caselist_loc, 'r') as f:
                 self.caselist = [x.strip() for x in f.readlines()]
         except:
+            print(f'{caselist_loc} is not accessible.  Please check')
+            sys.exit()
             pass
 
     def get_order_in_skeleton(self, skeletonDir):

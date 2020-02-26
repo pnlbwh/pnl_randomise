@@ -459,7 +459,6 @@ class CorrpMap(RandomiseRun):
         self.fsl_dir = Path(environ['FSLDIR'])
         self.fsl_data_dir = self.fsl_dir / 'data'
 
-        # enigma settings
         self.enigma_dir = Path('/data/pnl/soft/pnlpipe3/tbss/data/enigmaDTI')
         self.enigma_fa_loc = self.enigma_dir / 'ENIGMA_DTI_FA.nii.gz'
         self.enigma_table = self.enigma_dir / 'ENIGMA_look_up_table.txt'
@@ -470,7 +469,11 @@ class CorrpMap(RandomiseRun):
         self.check_significance()
         if self.significant:
             # if significant read in skeleton mask
-            self.mask_img = nb.load(str(self.enigma_skeleton_mask_loc))
+            # enigma settings
+            if 'mask' in kwargs:
+                self.mask_img = nb.load(str(kwargs.get('mask')))
+            else:
+                self.mask_img = nb.load(str(self.enigma_skeleton_mask_loc))
             self.mask_data = self.mask_img.get_data()
             self.get_significant_info()
             self.get_significant_overlap()
