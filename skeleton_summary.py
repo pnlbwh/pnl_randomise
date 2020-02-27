@@ -41,6 +41,7 @@ class MergedSkeleton:
     def __init__(self, merged_skeleton_loc, template='enigma'):
         """Read in merged skeleton nifti file"""
         self.merged_skeleton_loc = merged_skeleton_loc
+        self.template = template
         self.merged_skeleton_img = nb.load(str(self.merged_skeleton_loc))
         print(f"Reading {merged_skeleton_loc}")
         self.merged_skeleton_data = self.merged_skeleton_img.get_fdata()
@@ -55,8 +56,12 @@ class MergedSkeleton:
         self.enigma_fa_loc = self.enigma_dir / 'ENIGMA_DTI_FA.nii.gz'
         self.enigma_skeleton_mask_loc = self.enigma_dir / \
             'ENIGMA_DTI_FA_skeleton_mask.nii.gz'
-        self.mask_data = nb.load(
-            str(self.enigma_skeleton_mask_loc)).get_fdata() == 1
+
+        if self.template == 'enigma':
+            self.mask_data = nb.load(
+                str(self.enigma_skeleton_mask_loc)).get_fdata() == 1
+        else:
+            self.mask_data = nb.load(self.template).get_fdata() == 1
         print(f"Completed reading enigma skeleton mask")
 
         # binarize merged skeleton map
