@@ -92,14 +92,16 @@ def get_corrp_map_classes(corrp_map_locs, args):
                                 matrix_file=args.matrix,
                                 merged_img_dir=args.merged_img_dir,
                                 template=args.template,
-                                caselist=caselist)
+                                caselist=caselist,
+                                group_labels=args.grouplabels)
         else:
             corrpMap = CorrpMap(corrp_map_loc,
                                 threshold=args.threshold,
                                 contrast_file=args.contrast,
                                 matrix_file=args.matrix,
                                 template=args.template,
-                                caselist=caselist)
+                                caselist=caselist,
+                                group_labels=args.grouplabels)
 
         corrp_map_classes.append(corrpMap)
 
@@ -197,9 +199,15 @@ class RandomiseRun:
                 else:
                     # Change order of columns according to their column numbers
                     if pos_col_num < neg_col_num:
-                        text = f'Group {pos_col_num+1} > Group {neg_col_num+1}'
+                        if self.group_labels:
+                            text = f'{self.group_labels[pos_col_num]} > {self.group_labels[neg_col_num]}'
+                        else:
+                            text = f'Group {pos_col_num+1} > Group {neg_col_num+1}'
                     else:
-                        text = f'Group {neg_col_num+1} < Group {pos_col_num+1}'
+                        if self.group_labels:
+                            text = f'{self.group_labels[neg_col_num]} < {self.group_labels[pos_col_num]}'
+                        else:
+                            text = f'Group {neg_col_num+1} < Group {pos_col_num+1}'
                 self.contrast_lines.append(text)
         # TODO add interaction information
         # if group column is zero
@@ -255,6 +263,7 @@ class RandomiseRun:
         # rename columns to have 'col ' in each
         self.matrix_df.columns = [f'col {x+1}' for x in
                                   self.matrix_df.columns]
+
         # summarize matrix
         self.matrix_info = self.matrix_df.describe()
         self.matrix_info = self.matrix_info.loc[
@@ -312,17 +321,29 @@ class RandomiseRun:
             # 'unique' and 'count' columns of group columns
             for group_num, col in enumerate(self.group_cols, 1):
                 # unique values as an extra row
-                self.matrix_info.loc['column info', col] = f"Group {group_num}"
+                # self.matrix_info.loc['column info', col] = f"Group {group_num}"
+                if self.group_labels != False:
+                    self.matrix_info.loc['column info', col] = \
+                        self.group_labels[group_num-1]
+                else:
+                    self.matrix_info.loc['column info', col] = \
+                        f"Group {group_num}"
+
                 # count of each unique value as an extra row
                 self.matrix_info.loc['count', col] = \
                     (self.matrix_df[col] == 1).sum()
 
             # wide to long
             df_tmp = self.matrix_df.copy()
+            print_df(df_tmp)
             for num, row in df_tmp.iterrows():
                 for group_num, group_col in enumerate(self.group_cols, 1):
                     if row[group_col] == 1:
-                        df_tmp.loc[num, 'group'] = f'Group {group_num}'
+                        if self.group_labels != False:
+                            df_tmp.loc[num, 'group'] = f'{self.group_labels[group_num-1]}'
+                        else:
+                            df_tmp.loc[num, 'group'] = f'Group {group_num}'
+            print_df(df_tmp)
                 
             # # non-group column
             self.covar_info_dict = {}
@@ -374,7 +395,7 @@ class RandomiseRun:
             print_df(self.matrix_info)
 
 
-def print_corrpMaps_summary(corrp_map_classes, sig_only=False):
+def print_and_return_corrpMaps_summary(corrp_map_classes, sig_only=False):
     """Print the information of each corrpMap in the corrp_map_classes list"""
 
     print_head('Result summary')
@@ -392,6 +413,8 @@ def print_corrpMaps_summary(corrp_map_classes, sig_only=False):
                   'the -so option')
     else:
         print_df(df.set_index(df.columns[0]))
+
+    return df
 
 
 class CorrpMap(RandomiseRun):
@@ -421,6 +444,11 @@ class CorrpMap(RandomiseRun):
         self.contrast_file = contrast_file
         self.matrix_file = matrix_file
 
+        # group labels
+        if 'group_labels' in kwargs:
+            self.group_labels = kwargs.get('group_labels')
+        else:
+            self.group_labels = False
         # if caselist is given
         # in `get_corrp_map_classes`, '' is given as the caselist
         # when there is no caelist is given to the randomise_summary.py
@@ -501,7 +529,6 @@ class CorrpMap(RandomiseRun):
 
         # summary in pandas DataFrame
         self.make_df()
-        print(self.df)
 
         # if matrix or contrast file is given
         if self.matrix_file != 'missing':
@@ -834,7 +861,7 @@ class CorrpMap(RandomiseRun):
             self.tbssFigure = nifti_snapshot.TbssFigure(
                 image_files=[self.tbss_fill_out],
                 fa_bg=self.fa_bg_loc,
-                skeleton_bg=self.template,
+                skeleton_bg=self.skel_mask_loc,
                 output_file=self.out_image_loc,
                 cmap_list=['autumn'],
                 cbar_titles=[self.cbar_title],
@@ -860,7 +887,7 @@ class CorrpMap(RandomiseRun):
             self.tbssFigure = nifti_snapshot.TbssFigure(
                 image_files=[str(self.location)],
                 fa_bg=self.fa_bg_loc,
-                skeleton_bg=self.template,
+                skeleton_bg=self.skel_mask_loc,
                 output_file=self.out_image_loc,
                 cmap_list=['autumn'],
                 cbar_titles=[self.cbar_title],
@@ -1215,6 +1242,10 @@ The most simple way to use the script is
         "--tbss_all_loc", "-tal", type=str, help='tbss_all output path')
 
     argparser.add_argument(
+        "--grouplabels", "-gl", type=str, nargs='+', default=False,
+        help='List of group names in the same order as the matrix')
+
+    argparser.add_argument(
         "--html_summary", "-hs", action='store_true',
         help='Create web summary from the randomise outputs')
 
@@ -1223,7 +1254,7 @@ The most simple way to use the script is
     # Get a list of corrp map paths based on the arg parse inputs
     corrp_map_locs = get_corrp_map_locs(args)
 
-    # Get a list of corrpMap objects
+    # Get a list of corrpMap objects ** this is where corrpMaps are formed
     corrp_map_classes = get_corrp_map_classes(corrp_map_locs, args)
 
     # Print a matrix information of the first corrpMap in the corrp_map_classes
@@ -1239,7 +1270,8 @@ The most simple way to use the script is
             print_df(table)
 
     # Print information of each corrpMap
-    print_corrpMaps_summary(corrp_map_classes, sig_only=args.sig_only)
+    df = print_and_return_corrpMaps_summary(corrp_map_classes,
+                                            sig_only=args.sig_only)
 
     # if atlas query option is on
     if args.atlasquery:
@@ -1389,4 +1421,4 @@ The most simple way to use the script is
     if args.html_summary:
         create_html(corrp_map_classes, df, args)
         print(f'HTML summary is saved in '
-              f"{corrpMap.location.parent / 'randomise_summary.html'}")
+              f"{corrp_map_classes[0].location.parent / 'randomise_summary.html'}")
