@@ -144,4 +144,4 @@ if __name__ == '__main__':
               f'order as in the {args.caselist} - matched using '
               f'the file naming conventions in {args.skeleton_dir}')
     else:
-        print('Give --skeleton_dir and --merged_data')
+        print('Give both --skeleton_dir and --merged_data')
