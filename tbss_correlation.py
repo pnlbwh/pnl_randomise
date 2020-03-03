@@ -62,10 +62,8 @@ class ValuesExtracted:
             include=['float', 'int']
         )
 
-
     def get_corr_map(self):
         self.corr_map = self.all_df_int_float.corr()
-
 
     def get_stats(self):
         p_dict = {}
@@ -227,7 +225,7 @@ class ValuesExtracted:
         else:
             self.correlation_name = f'{method.capitalize()} correlation'
 
-    def get_heat_map_p(self, group='all subjects'):
+    def get_heat_map_p(self, group='all subjects', **kwargs):
         # plot correlation columns
         threshold = 0.05
 
@@ -268,9 +266,16 @@ class ValuesExtracted:
              f'{group} \n(only showing P < {threshold})',
              fontsize=13,
              fontweight='bold', y=.97)
-        fig.show()
+        fig.tight_layout()
+        fig.subplots_adjust(top=0.85)
 
-    def get_heat_map_r(self, group='all subjects'):
+        if 'out_img' in kwargs:
+            out_img = kwargs.get('out_img')
+            fig.savefig(out_img)
+        else:
+            fig.show()
+
+    def get_heat_map_r(self, group='all subjects', **kwargs):
         # plot correlation columns
         threshold = 0.05
 
@@ -321,7 +326,15 @@ class ValuesExtracted:
             f'(only showing P < {threshold})',
             fontsize=13,
             fontweight='bold', y=.97)
-        fig.show()
+        fig.tight_layout()
+        fig.subplots_adjust(top=0.85)
+
+        if 'out_img' in kwargs:
+            out_img = kwargs.get('out_img')
+            fig.savefig(out_img)
+        else:
+            fig.show()
+        # fig.show()
 
     def get_easier_name(self, full_name, group_2):
         """Get easier name based on the file name

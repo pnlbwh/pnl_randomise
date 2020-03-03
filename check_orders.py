@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import argparse
 import sys
+pd.set_option('max_rows', 200)
 
 """
 This script is used to compare the order of 3d skeletons in the merged 4d
