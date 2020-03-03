@@ -258,7 +258,9 @@ class ValuesExtracted:
                 cmap='autumn',
                 cbar=False)
 
-        plt.xticks(rotation=70)
+            axes[num].set_xticklabels(
+                   axes[num].get_xticklabels(), rotation=90)
+
         fig.subplots_adjust(wspace=1.3)
         fig.suptitle(
              f'{self.correlation_name} p-values\nbetween the values in '
