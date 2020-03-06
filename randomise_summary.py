@@ -11,7 +11,6 @@ import seaborn as sns
 from scipy import ndimage
 
 # Imaging
-import nibabel as nb
 import argparse
 import pandas as pd
 import re
@@ -23,6 +22,8 @@ import os
 from randomise_utils import print_head, print_warning, print_df
 from randomise_utils import search_and_select_one
 from skeleton_summary import MergedSkeleton, SkeletonDir, SkeletonDirSig
+
+from pnl_randomise_utils import get_nifti_data, get_nifti_img_data
 
 # figures
 import sys
@@ -470,8 +471,8 @@ class CorrpMap(RandomiseRun):
         self.check_significance()
         if self.significant:
             # if significant read in skeleton mask
-            self.mask_img = nb.load(str(self.enigma_skeleton_mask_loc))
-            self.mask_data = self.mask_img.get_data()
+            self.mask_img, self.mask_data = get_nifti_img_data(
+                self.enigma_skeleton_mask_loc)
             self.get_significant_info()
             self.get_significant_overlap()
 
@@ -502,8 +503,7 @@ class CorrpMap(RandomiseRun):
         """
 
         # read corrp images
-        img = nb.load(str(self.location))
-        data = img.get_data()
+        img, data = get_nifti_img_data(self.location)
 
         # add data resolution attribute
         self.data_shape = data.shape
@@ -679,7 +679,7 @@ class CorrpMap(RandomiseRun):
             - parallelize
             - think about using all_modality_merged images?
         """
-        merged_4d_data = nb.load(str(self.merged_4d_file)).get_data()
+        merged_4d_data = get_nifti_data(self.merged_4d_file)
 
         # get a map with significant voxels
         significant_cluster_data = np.where(
@@ -828,17 +828,16 @@ class CorrpMap(RandomiseRun):
         if 'mean_fa' in kwargs:
             mean_fa_loc = kwargs.get('mean_fa')
             print(f'background image : {mean_fa_loc}')
-            self.enigma_fa_data = nb.load(mean_fa_loc).get_data()
+            self.enigma_fa_data = get_nifti_data(mean_fa_loc).
 
             mean_fa_skel_loc = re.sub('.nii.gz', '_skeleton.nii.gz',
                                       mean_fa_loc)
             print(f'background skeleton image: {mean_fa_skel_loc}')
-            self.enigma_skeleton_data = nb.load(mean_fa_skel_loc).get_data()
+            self.enigma_skeleton_data = get_nifti_data(mean_fa_skel_loc)
         else:
-            self.enigma_fa_data = nb.load(
-                str(self.enigma_fa_loc)).get_data()
-            self.enigma_skeleton_data = nb.load(
-                str(self.enigma_skeleton_mask_loc)).get_data()
+            self.enigma_fa_data = get_nifti_data(self.enigma_fa_loc)
+            self.enigma_skeleton_data = get_nifti_data(
+                    self.enigma_skeleton_mask_loc)
 
         # figure settings
         self.ncols = 5
