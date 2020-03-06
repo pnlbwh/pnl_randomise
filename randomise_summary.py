@@ -976,7 +976,8 @@ class CorrpMap(RandomiseRun):
 
 def skeleton_summary(corrpMap, warp_dir=False, caselist=False):
     """ Make summary from corrpMap, using its merged_skeleton"""
-    mergedSkeleton = MergedSkeleton(str(corrpMap.merged_4d_file))
+    mergedSkeleton = MergedSkeleton(corrpMap.merged_4d_file,
+                                    corrpMap.skelton_mask)
     mergedSkeleton.skeleton_level_summary()
     mergedSkeleton.subject_level_summary()
 
