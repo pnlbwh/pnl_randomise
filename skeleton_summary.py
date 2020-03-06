@@ -1,8 +1,5 @@
 #!/data/pnl/kcho/anaconda3/bin/python
 
-# nifti
-import nibabel as nb
-
 # table and array
 import numpy as np
 import pandas as pd
@@ -23,6 +20,7 @@ import argparse
 from itertools import combinations
 from stats import anova, ttest
 
+from pnl_randomise_utils import get_nifti_data, get_nifti_img_data
 
 def get_average_for_each_volume(merged_skeleton_data, mask):
     """Get average of values in the mask for each volume"""
@@ -41,9 +39,9 @@ class MergedSkeleton:
     def __init__(self, merged_skeleton_loc, template='enigma'):
         """Read in merged skeleton nifti file"""
         self.merged_skeleton_loc = merged_skeleton_loc
-        self.merged_skeleton_img = nb.load(str(self.merged_skeleton_loc))
         print(f"Reading {merged_skeleton_loc}")
-        self.merged_skeleton_data = self.merged_skeleton_img.get_fdata()
+        self.merged_skeleton_img, self.merged_skeleton_data = \
+                get_nifti_img_data(self.merged_skeleton_loc)
         print(f"Completed reading {merged_skeleton_loc}")
 
         # data shape
@@ -55,8 +53,8 @@ class MergedSkeleton:
         self.enigma_fa_loc = self.enigma_dir / 'ENIGMA_DTI_FA.nii.gz'
         self.enigma_skeleton_mask_loc = self.enigma_dir / \
             'ENIGMA_DTI_FA_skeleton_mask.nii.gz'
-        self.mask_data = nb.load(
-            str(self.enigma_skeleton_mask_loc)).get_fdata() == 1
+        self.mask_data = \
+            get_nifti_data(self.enigma_skeleton_mask_loc) == 1
         print(f"Completed reading enigma skeleton mask")
 
         # binarize merged skeleton map
@@ -192,7 +190,7 @@ class MergedSkeleton:
             vol_data = self.merged_skeleton_data[:, :, :, vol_num]
             subject_id = cases[vol_num]
             warp_data_loc = list(Path(warp_dir).glob(f'*{subject_id}*'))[0]
-            warp_data = nb.load(str(warp_data_loc)).get_data()
+            warp_data = get_nifti_data(warp_data_loc)
             # zero where the mask is not zero
             zero_in_the_skeleton_coord = np.where(
                 (self.mask_data == 1) & (vol_data == 0)
@@ -209,7 +207,7 @@ class MergedSkeleton:
             subject_nonzero_stds: list, std of non-zero skeleton
         """
 
-        mask_data = nb.load(mask).get_data()
+        mask_data = get_nifti_data(mask)
         mask_data = np.where(mask_data > threshold, 1, 0)
 
         # Non-zero mean values in each subject skeleton
@@ -251,7 +249,7 @@ class SkeletonDir:
     def summary(self):
         """Summarize skeleton"""
         # list of all skeleton nifti files in numpy arrays
-        arrays = [nb.load(str(x)).get_data() for x in self.skeleton_files]
+        arrays = [get_nifti_data(x) for x in self.skeleton_files]
 
         # merge skeleton files
         self.merged_skeleton_data = np.stack(arrays, axis=3)
@@ -475,7 +473,7 @@ class SkeletonDirSig(SkeletonDir):
     def summary(self):
         """Summarize skeleton"""
         # list of all skeleton nifti files in numpy arrays
-        arrays = [nb.load(str(x)).get_data() for x in self.skeleton_files]
+        arrays = [get_nifti_data(x) for x in self.skeleton_files]
 
         # merge skeleton files
         self.merged_skeleton_data = np.stack(arrays, axis=3)
