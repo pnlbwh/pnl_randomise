@@ -54,7 +54,6 @@ class FA:
         if (self.zero_within_mask).any():
             return True
 
-
     def get_distance_from_nearest_zero(self):
         pass
 

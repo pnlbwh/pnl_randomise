@@ -828,7 +828,7 @@ class CorrpMap(RandomiseRun):
         if 'mean_fa' in kwargs:
             mean_fa_loc = kwargs.get('mean_fa')
             print(f'background image : {mean_fa_loc}')
-            self.enigma_fa_data = get_nifti_data(mean_fa_loc).
+            self.enigma_fa_data = get_nifti_data(mean_fa_loc)
 
             mean_fa_skel_loc = re.sub('.nii.gz', '_skeleton.nii.gz',
                                       mean_fa_loc)
