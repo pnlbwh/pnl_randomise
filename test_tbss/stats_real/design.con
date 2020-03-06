@@ -1,9 +1,0 @@
-/ContrastName1 group1 > group2
-/ContrastName2 group1 < group2
-/ContrastName2 age
-/NumWaves 3
-/NumContrasts	2
-/PPheights	2	2	0
-/Matrix
-1	-1	0
--1	1	0
