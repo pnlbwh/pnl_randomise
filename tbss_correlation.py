@@ -16,6 +16,7 @@ import sys
 sys.path.append('/data/pnl/kcho/PNLBWH/devel/kchopy/kchopy/kchostats')
 import partial_correlation_rpy
 import os
+import math
 
 
 class ValuesExtracted:
@@ -358,3 +359,62 @@ class ValuesExtracted:
         return f'{modality} ({text})'
 
 
+    def get_corr_graphs(self, group='all subjects', **kwargs):
+        # plot correlation columns
+        threshold = 0.05
+
+        # self.p_df.columns = self.sig_cols_simple
+
+        sig_num = 0
+        for index, row in self.p_df.iterrows():
+            for col in self.p_df.columns:
+                if row[col] < threshold:
+                    sig_num += 1
+
+        height = math.ceil(sig_num/3) * 5
+        fig, axes = plt.subplots(
+                ncols=3,
+                nrows=math.ceil(sig_num/3),
+                figsize=(10, height), dpi=150)
+
+        ax_num = 0
+        for col_num, col in enumerate(self.p_df.columns):
+            for index, row in self.p_df.iterrows():
+                if row[col] < threshold:
+
+                    p = self.p_df.loc[index, col]
+                    r = self.r_df.loc[index, col]
+
+                    if group == 'SLE':
+                        tmp_df = self.all_df[self.all_df.label.isin(['nonNPSLE', 'NPSLE'])][[index, col]]
+                    else:
+                        tmp_df = self.all_df[self.all_df.label == group][[index, col]]
+                    print(ax_num)
+                    try:
+                        sns.regplot(x=index, y=col, data=tmp_df, ax=np.ravel(axes)[ax_num])
+                        np.ravel(axes)[ax_num].set_ylabel(self.sig_cols_simple[col_num])
+                    except:
+                        print(ax_num, 'error')
+                        print('axlen', len(np.ravel(axes)))
+                        print(index, col)
+                        pass
+                    np.ravel(axes)[ax_num].text(0.5, 0.9, f'r = {r:.3f}, P = {p:.3f}',
+                            ha='center',
+                            transform=np.ravel(axes)[ax_num].transAxes)
+                    ax_num += 1
+
+        fig.subplots_adjust(wspace=1.3)
+        fig.tight_layout()
+        fig.subplots_adjust(top=1-(0.15/axes.shape[1]))
+        fig.suptitle(
+             f'{self.correlation_name} p-values\nbetween the values in '
+             f'the significant clusters VS clinical variables in '
+             f'{group} \n(only showing P < {threshold})',
+             fontsize=13,
+             fontweight='bold', y=.97)
+
+        if 'out_img' in kwargs:
+            out_img = kwargs.get('out_img')
+            fig.savefig(out_img)
+        else:
+            fig.show()

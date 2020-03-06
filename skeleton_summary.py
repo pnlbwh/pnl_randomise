@@ -38,30 +38,15 @@ def get_average_for_each_volume(merged_skeleton_data, mask):
 
 class MergedSkeleton:
     """TBSS all_modality_skeleton map object"""
-    def __init__(self, merged_skeleton_loc, template='enigma'):
+    def __init__(self, merged_skeleton_loc, skeleton_mask_loc):
         """Read in merged skeleton nifti file"""
         self.merged_skeleton_loc = merged_skeleton_loc
-        self.template = template
         self.merged_skeleton_img = nb.load(str(self.merged_skeleton_loc))
         print(f"Reading {merged_skeleton_loc}")
         self.merged_skeleton_data = self.merged_skeleton_img.get_fdata()
         print(f"Completed reading {merged_skeleton_loc}")
 
-        # data shape
-        # self.data_shape = self.
-
-        # ENIGMA
-        print(f"Reading enigma skeleton mask")
-        self.enigma_dir = Path('/data/pnl/soft/pnlpipe3/tbss/data/enigmaDTI')
-        self.enigma_fa_loc = self.enigma_dir / 'ENIGMA_DTI_FA.nii.gz'
-        self.enigma_skeleton_mask_loc = self.enigma_dir / \
-            'ENIGMA_DTI_FA_skeleton_mask.nii.gz'
-
-        if self.template == 'enigma':
-            self.mask_data = nb.load(
-                str(self.enigma_skeleton_mask_loc)).get_fdata() == 1
-        else:
-            self.mask_data = nb.load(self.template).get_fdata() == 1
+        self.mask_data = nb.load(str(skeleton_mask_loc)).get_fdata() == 1
         print(f"Completed reading enigma skeleton mask")
 
         # binarize merged skeleton map
@@ -318,6 +303,8 @@ class SkeletonDir:
 
         self.g.ax.set_xticklabels([get_ticklabels(self.df, x) for x in
                                    self.df.group.unique()])
+        # group_list = corrpMap.group_labels
+        # print(group_list)
 
         # average line
         line_width = 0.3

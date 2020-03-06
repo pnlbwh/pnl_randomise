@@ -1,0 +1,6 @@
+#!/bin/bash
+
+PROBTRACKX_OUTPUT=`$FSLDIR/bin/probtrackx2 $@`
+
+echo ${PROBTRACKX_OUTPUT}
+

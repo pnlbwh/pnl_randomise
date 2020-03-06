@@ -1,0 +1,11 @@
+/Group1 OCD
+/Group2 Controls
+/Covar Gender, Age
+/NumWaves  4
+/NumContrasts	4
+/PPheights	1	1	1	17
+/Matrix
+0    1    1    25
+0    1    1    25
+1    0    0    37
+1    0    1    20

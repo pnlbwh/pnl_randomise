@@ -1,19 +1,94 @@
 ![icon](docs/icon_20.png) 
 
-# FSL randomise related scripts
-
-
 [![DOI](https://zenodo.org/badge/209407534.svg)](https://zenodo.org/badge/latestdoi/209407534)
 
 
-Summarize and Visualize Information from FSL Randomise Outputs
+# FSL Randomise related tools
+
+1. Run randomise in parallel
+2. Summarize and Visualize Information from FSL Randomise Outputs
 
 
-## TODO
-- Make a option to run `randomise_parallel_pnl` in environments without `bsub`
-- Write a complete test for `randomise_summary.py`
-- Write up contrast line translation functions for interaction effect
-- Add atlas query output to the html summary
+
+Table of Contents
+=================
+
+   * [Dependencies](#dependencies)
+   * [Installation](#installation)
+      * [1. Install prerequisites](#1-install-prerequisites)
+         * [i. Check system architecture](#i-check-system-architecture)
+         * [ii. Python 3](#ii-python-3)
+         * [iii. FSL](#iii-fsl)
+         * [iv. ANTs](#iv-ants)
+      * [2. Install pipeline](#2-install-pipeline)
+      * [3. Configure your environment](#3-configure-your-environment)
+   * [Running](#running)
+   * [TODO](#TODO)      
+
+
+
+# Dependencies
+
+* bsub
+* FSL
+* numpy
+* pandas
+* nibabel
+
+
+# Installation
+
+## 1. Install prerequisites
+
+You may ignore installation instruction for any software module that you have already.
+
+### i. Check system architecture
+
+    uname -a # check if 32 or 64 bit
+
+### ii. Python 3
+
+Download [Miniconda Python 3.6 bash installer](https://docs.conda.io/en/latest/miniconda.html) (32/64-bit based on your environment):
+    
+    sh Miniconda3-latest-Linux-x86_64.sh -b # -b flag is for license agreement
+
+Activate the conda environment:
+
+    source ~/miniconda3/bin/activate # should introduce '(base)' in front of each line
+
+### iii. FSL
+
+Follow the [instruction](https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FslInstallation) to download and install FSL.
+
+
+
+## 2. Install pipeline
+
+```sh
+$ git clone https://github.com/pnlbwh/pnl_randomise && cd pnl_randomise
+```
+    
+
+## 3. Configure your environment
+
+Make sure the following executables are in your path:
+
+    randomise
+    tbss_1_preproc
+    
+
+# Running
+
+Upon successful installation, you should be able to see the help message
+
+```sh
+
+$ randomise_parallel_pnl
+
+# and 
+
+$ randomise_summary.py --help  
+```
 
 
 
@@ -34,7 +109,18 @@ Dispatches `randomise_parallel` splited jobs through `bsub`.
 
 ```
 FSL
-bsub
+python 3
+nibabel
+pandas
+numpy
+tabulate
+pathlib
+tempfile
+nifti_snapshot 
+os
+getpass
+getpwuid
+jinja2
 ```
 
 
@@ -315,3 +401,11 @@ Above script checks for whether
 - the number of significant voxels are the same as that estimated in FSL
 - the mean of significant voxels are almost equal to that estimated in FSL (to 4th decimal point)
 - the overlap estimated with the harvard oxford atlas equals that estimated in FSL
+
+
+# TODO
+
+- Make a option to run `randomise_parallel_pnl` in environments without `bsub`
+- Write a complete test for `randomise_summary.py`
+- Write up contrast line translation functions for interaction effect
+- Add atlas query output to the html summary

@@ -1,0 +1,54 @@
+#!/bin/sh
+echo "Merging stat images"
+for FIRSTSEED in tbss_FA_SEED1_*_p_*.nii.gz tbss_FA_SEED1_*_corrp_*.nii.gz ; do 
+  ADDCOMMAND=""
+  ACTIVESEED=1
+  if [ -e $FIRSTSEED ] ; then
+    while [ $ACTIVESEED -le 50 ] ; do
+      ADDCOMMAND=`echo $ADDCOMMAND -add ${FIRSTSEED/_SEED1_/_SEED${ACTIVESEED}_}`
+      ACTIVESEED=`expr $ACTIVESEED + 1`
+    done
+    ADDCOMMAND=${ADDCOMMAND#-add}
+    echo $ADDCOMMAND
+    $FSLDIR/bin/fslmaths $ADDCOMMAND -mul 100 -div 4951 ${FIRSTSEED/_SEED1/}
+  fi
+done
+
+echo "Merging text files"
+for FIRSTSEED in tbss_FA_SEED1_*perm_*.txt tbss_FA_SEED1_*_p_*.txt tbss_FA_SEED1_*_corrp_*.txt ; do
+  ACTIVESEED=1
+  if [ -e $FIRSTSEED ] ; then
+    while [ $ACTIVESEED -le 50 ] ; do
+      if [ $ACTIVESEED -eq 1 ] ; then
+         cat ${FIRSTSEED/_SEED1_/_SEED${ACTIVESEED}_} >> ${FIRSTSEED/_SEED1/}
+      else
+         tail -n +2 ${FIRSTSEED/_SEED1_/_SEED${ACTIVESEED}_} >> ${FIRSTSEED/_SEED1/}
+      fi
+      ACTIVESEED=`expr $ACTIVESEED + 1`
+    done
+  fi
+done
+
+echo "Renaming raw stats"
+for TYPE in _ _tfce_ ; do
+  for FIRSTSEED in tbss_FA_SEED1${TYPE}tstat*.nii.gz tbss_FA_SEED1${TYPE}fstat*.nii.gz ; do 
+    if [ -e $FIRSTSEED ] ; then
+      cp $FIRSTSEED ${FIRSTSEED/_SEED1/}
+    fi
+  done
+done
+
+ACTIVESEED=1
+while [ $ACTIVESEED -le 50 ] ; do
+  rm -rf tbss_FA_SEED${ACTIVESEED}*_p_*
+  rm -rf tbss_FA_SEED${ACTIVESEED}*_corrp_*
+  rm -rf tbss_FA_SEED${ACTIVESEED}*stat????.nii.gz
+  rm -rf tbss_FA_SEED${ACTIVESEED}*stat???.nii.gz
+  rm -rf tbss_FA_SEED${ACTIVESEED}*stat??.nii.gz
+  rm -rf tbss_FA_SEED${ACTIVESEED}*stat?.nii.gz
+  rm -rf tbss_FA_SEED${ACTIVESEED}_*perm_*.txt tbss_FA_SEED${ACTIVESEED}_*_p_*.txt tbss_FA_SEED${ACTIVESEED}_*_corrp_*.txt
+
+  ACTIVESEED=`expr $ACTIVESEED + 1`
+done
+
+echo "Done"

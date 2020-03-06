@@ -335,7 +335,7 @@ class RandomiseRun:
 
             # wide to long
             df_tmp = self.matrix_df.copy()
-            print_df(df_tmp)
+            # print_df(df_tmp)
             for num, row in df_tmp.iterrows():
                 for group_num, group_col in enumerate(self.group_cols, 1):
                     if row[group_col] == 1:
@@ -343,7 +343,7 @@ class RandomiseRun:
                             df_tmp.loc[num, 'group'] = f'{self.group_labels[group_num-1]}'
                         else:
                             df_tmp.loc[num, 'group'] = f'Group {group_num}'
-            print_df(df_tmp)
+            # print_df(df_tmp)
                 
             # # non-group column
             self.covar_info_dict = {}
@@ -949,11 +949,13 @@ class CorrpMap(RandomiseRun):
         else:
             vmax = 1
 
-
+        # matrix_df[corrpMap.group_cols].astype(
+            # 'int').to_string(header=False, index=False).split('\n')
+            # fa_bg=self.fa_bg_loc,
+            # skeleton_bg=self.template,
         self.tbssFigure = nifti_snapshot.TbssFigure(
+            template=self.template,
             image_data_list=[data],
-            fa_bg=self.fa_bg_loc,
-            skeleton_bg=self.template,
             output_file=self.out_image_loc,
             cmap_list=['autumn'],
             cbar_titles=[self.cbar_title],
@@ -994,8 +996,10 @@ class CorrpMap(RandomiseRun):
 
 def skeleton_summary(corrpMap, warp_dir=False, caselist=False):
     """ Make summary from corrpMap, using its merged_skeleton"""
-    mergedSkeleton = MergedSkeleton(str(corrpMap.merged_4d_file), 
-                                    template=corrpMap.template)
+    mergedSkeleton = MergedSkeleton(
+            str(corrpMap.merged_4d_file),
+            corrpMap.skel_mask_loc)
+    mergedSkeleton.fa_bg_loc = corrpMap.fa_bg_loc
     mergedSkeleton.skeleton_level_summary()
     mergedSkeleton.subject_level_summary()
 
@@ -1307,7 +1311,7 @@ The most simple way to use the script is
         if args.subject_values or args.skeleton_summary:
             # make sure all the input corrp maps are in the same directory
             check_corrp_map_locations(corrp_map_classes)
-            args.merged_img_dir = str(corrpMap.location.parent)
+            args.merged_img_dir = str(corrp_map_classes[0].location.parent)
 
     # if subject_values option is given
     if args.subject_values:
@@ -1322,7 +1326,9 @@ The most simple way to use the script is
                     mergedSkeleton = modal_ms_dict[corrpMap.modality]
                     mergedSkeleton.update_with_corrpMap(corrpMap)
                 else:
-                    mergedSkeleton = MergedSkeleton(corrpMap.merged_4d_file)
+                    mergedSkeleton = MergedSkeleton(
+                        corrpMap.merged_4d_file,
+                        corrpMap.skel_mask_loc)
                     mergedSkeleton.update_with_corrpMap(corrpMap)
 
                     # if there is a need to save mergedSkeleton
