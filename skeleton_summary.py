@@ -37,14 +37,16 @@ def get_average_for_each_volume(data, mask):
 class MergedSkeleton:
     """TBSS all_modality_skeleton map object"""
     def __init__(self, merged_skeleton_loc, mask_loc):
-        """Read in merged skeleton nifti file"""
+        """initialize mergedSkeleton object"""
         self.merged_skeleton_loc = merged_skeleton_loc
+
+        # load merged skeleton nifti
         print(f"Reading {merged_skeleton_loc}")
         self.merged_skeleton_img, self.merged_skeleton_data = \
-                get_nifti_img_data(self.merged_skeleton_loc)
+                get_nifti_img_data(merged_skeleton_loc)
         print(f"Completed reading {merged_skeleton_loc}")
 
-        # load mask
+        # load mask as boolean array
         self.mask_data = get_nifti_data(mask_loc) == 1
 
         # binarize merged skeleton map
@@ -52,6 +54,7 @@ class MergedSkeleton:
         self.merged_skeleton_data_bin_sum = np.sum(
             np.where(self.merged_skeleton_data == 0, 0, 1),
             axis=3)
+
         print(f"Estimating mean of binarized skeleton maps for all subject")
         self.merged_skeleton_data_bin_mean = np.mean(
             np.where(self.merged_skeleton_data == 0, 0, 1),
@@ -619,7 +622,7 @@ The most simple way to use the script is
     args = argparser.parse_args()
 
     if args.dir:
-        skeleton_summary(args.merged_4d_file, 
+        skeleton_summary(args.merged_4d_file,
                          args.skeleton_mask,
                          args.tbss_all_loc,
                          directory=args.dir)
