@@ -11,7 +11,6 @@ import seaborn as sns
 from scipy import ndimage
 
 # Imaging
-import nibabel as nb
 import argparse
 import pandas as pd
 import re
@@ -20,9 +19,11 @@ from os import environ
 import os
 
 # utils
-from randomise_utils import print_head, print_warning, print_df
-from randomise_utils import search_and_select_one
 from skeleton_summary import MergedSkeleton, SkeletonDir, SkeletonDirSig
+
+from pnl_randomise_utils import get_nifti_data, get_nifti_img_data
+from pnl_randomise_utils import print_head, print_warning, print_df
+from pnl_randomise_utils import search_and_select_one
 
 # figures
 import sys
@@ -519,8 +520,11 @@ class CorrpMap(RandomiseRun):
 
         if self.significant:
             # if significant read in skeleton mask
+            #TODO
             # enigma settings
             self.skel_mask_data = self.skel_mask_img.get_fdata()
+            self.mask_img, self.mask_data = get_nifti_img_data(
+                self.enigma_skeleton_mask_loc)
             self.get_significant_info()
             self.get_significant_overlap()
 
@@ -577,9 +581,14 @@ class CorrpMap(RandomiseRun):
                              voxels greater than `self.threshold`)
         """
 
+<<<<<<< HEAD
         # Read the corrected p image
         img = nb.load(str(self.location))
         data = img.get_data()
+=======
+        # read corrp images
+        img, data = get_nifti_img_data(self.location)
+>>>>>>> 7afd095af1f5dc55f30709df2ac9867c3c4f1ac5
 
         # add data resolution attribute
         self.data_shape = data.shape
@@ -763,7 +772,7 @@ class CorrpMap(RandomiseRun):
             - parallelize
             - think about using all_modality_merged images?
         """
-        merged_4d_data = nb.load(str(self.merged_4d_file)).get_data()
+        merged_4d_data = get_nifti_data(self.merged_4d_file)
 
         # get a map with significant voxels
         significant_cluster_data = np.where(
@@ -916,6 +925,49 @@ class CorrpMap(RandomiseRun):
         # TODO add skeleton check functions to the randomise_summary
         """Fig and axes attribute to CorrpMap"""
 
+<<<<<<< HEAD
+=======
+        # if study template is not ENIGMA
+        if 'mean_fa' in kwargs:
+            mean_fa_loc = kwargs.get('mean_fa')
+            print(f'background image : {mean_fa_loc}')
+            self.enigma_fa_data = get_nifti_data(mean_fa_loc)
+
+            mean_fa_skel_loc = re.sub('.nii.gz', '_skeleton.nii.gz',
+                                      mean_fa_loc)
+            print(f'background skeleton image: {mean_fa_skel_loc}')
+            self.enigma_skeleton_data = get_nifti_data(mean_fa_skel_loc)
+        else:
+            self.enigma_fa_data = get_nifti_data(self.enigma_fa_loc)
+            self.enigma_skeleton_data = get_nifti_data(
+                    self.enigma_skeleton_mask_loc)
+
+        # figure settings
+        self.ncols = 5
+        self.nrows = 4
+        size_w = 4
+        size_h = 4
+
+        # When study template is used, slice_gap=3 is too wide)
+        if self.data_shape[-1] < 100:
+            slice_gap = 2
+        else:
+            slice_gap = 3
+
+        # Get the center of data
+        center_of_data = np.array(
+            ndimage.measurements.center_of_mass(
+                self.enigma_fa_data)).astype(int)
+        # Get the center slice number
+        z_slice_center = center_of_data[-1]
+
+        # Get the slice numbers in array
+        nslice = self.ncols * self.nrows
+        slice_nums = np.arange(z_slice_center-(nslice * slice_gap),
+                               z_slice_center+(nslice * slice_gap),
+                               slice_gap)[::2]
+
+>>>>>>> 7afd095af1f5dc55f30709df2ac9867c3c4f1ac5
         # if corrpMap.corrp_data_filled exist
         if hasattr(self, 'corrp_data_filled'):
             data = np.where(self.corrp_data_filled == 0,
@@ -996,10 +1048,15 @@ class CorrpMap(RandomiseRun):
 
 def skeleton_summary(corrpMap, warp_dir=False, caselist=False):
     """ Make summary from corrpMap, using its merged_skeleton"""
+<<<<<<< HEAD
     mergedSkeleton = MergedSkeleton(
             str(corrpMap.merged_4d_file),
             corrpMap.skel_mask_loc)
     mergedSkeleton.fa_bg_loc = corrpMap.fa_bg_loc
+=======
+    mergedSkeleton = MergedSkeleton(corrpMap.merged_4d_file,
+                                    corrpMap.skelton_mask)
+>>>>>>> 7afd095af1f5dc55f30709df2ac9867c3c4f1ac5
     mergedSkeleton.skeleton_level_summary()
     mergedSkeleton.subject_level_summary()
 
