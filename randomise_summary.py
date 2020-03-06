@@ -19,11 +19,11 @@ from os import environ
 import os
 
 # utils
-from randomise_utils import print_head, print_warning, print_df
-from randomise_utils import search_and_select_one
 from skeleton_summary import MergedSkeleton, SkeletonDir, SkeletonDirSig
 
 from pnl_randomise_utils import get_nifti_data, get_nifti_img_data
+from pnl_randomise_utils import print_head, print_warning, print_df
+from pnl_randomise_utils import search_and_select_one
 
 # figures
 import sys
