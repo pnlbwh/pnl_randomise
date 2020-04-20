@@ -783,7 +783,7 @@ class CorrpMap(RandomiseRun):
                 title=self.title)
             # below is self.tbssFigure.create_figure_one_map()
             self.tbssFigure.images_mask_out_the_zero()
-            self.tbssFigure.loop_through_axes_draw_bg()
+            self.tbssFigure.loop_through_axes_draw_bg_tbss()
             self.tbssFigure.annotate_with_z()
             self.tbssFigure.loop_through_axes_draw_images()
             self.tbssFigure.cbar_x = 0.25
@@ -809,7 +809,7 @@ class CorrpMap(RandomiseRun):
             # below is self.tbssFigure.create_figure_one_map()
             self.tbssFigure.images_mask_out_the_zero()
             self.tbssFigure.images_mask_by_threshold(0.95)
-            self.tbssFigure.loop_through_axes_draw_bg()
+            self.tbssFigure.loop_through_axes_draw_bg_tbss()
             self.tbssFigure.annotate_with_z()
             self.tbssFigure.loop_through_axes_draw_images_corrp_map(0.95)
             self.tbssFigure.cbar_x = 0.25
