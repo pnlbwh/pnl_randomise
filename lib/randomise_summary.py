@@ -11,7 +11,6 @@ import seaborn as sns
 from scipy import ndimage
 
 # Imaging
-import nibabel as nb
 import argparse
 import pandas as pd
 import re
@@ -20,9 +19,11 @@ from os import environ
 import os
 
 # utils
-from randomise_utils import print_head, print_warning, print_df
-from randomise_utils import search_and_select_one
 from skeleton_summary import MergedSkeleton, SkeletonDir, SkeletonDirSig
+
+from pnl_randomise_utils import get_nifti_data, get_nifti_img_data
+from pnl_randomise_utils import print_head, print_warning, print_df
+from pnl_randomise_utils import search_and_select_one
 
 # figures
 import sys
@@ -91,13 +92,17 @@ def get_corrp_map_classes(corrp_map_locs, args):
                                 contrast_file=args.contrast,
                                 matrix_file=args.matrix,
                                 merged_img_dir=args.merged_img_dir,
-                                caselist=caselist)
+                                template=args.template,
+                                caselist=caselist,
+                                group_labels=args.grouplabels)
         else:
             corrpMap = CorrpMap(corrp_map_loc,
                                 threshold=args.threshold,
                                 contrast_file=args.contrast,
                                 matrix_file=args.matrix,
-                                caselist=caselist)
+                                template=args.template,
+                                caselist=caselist,
+                                group_labels=args.grouplabels)
 
         corrp_map_classes.append(corrpMap)
 
@@ -195,9 +200,15 @@ class RandomiseRun:
                 else:
                     # Change order of columns according to their column numbers
                     if pos_col_num < neg_col_num:
-                        text = f'Group {pos_col_num+1} > Group {neg_col_num+1}'
+                        if self.group_labels:
+                            text = f'{self.group_labels[pos_col_num]} > {self.group_labels[neg_col_num]}'
+                        else:
+                            text = f'Group {pos_col_num+1} > Group {neg_col_num+1}'
                     else:
-                        text = f'Group {neg_col_num+1} < Group {pos_col_num+1}'
+                        if self.group_labels:
+                            text = f'{self.group_labels[neg_col_num]} < {self.group_labels[pos_col_num]}'
+                        else:
+                            text = f'Group {neg_col_num+1} < Group {pos_col_num+1}'
                 self.contrast_lines.append(text)
         # TODO add interaction information
         # if group column is zero
@@ -253,6 +264,7 @@ class RandomiseRun:
         # rename columns to have 'col ' in each
         self.matrix_df.columns = [f'col {x+1}' for x in
                                   self.matrix_df.columns]
+
         # summarize matrix
         self.matrix_info = self.matrix_df.describe()
         self.matrix_info = self.matrix_info.loc[
@@ -310,17 +322,29 @@ class RandomiseRun:
             # 'unique' and 'count' columns of group columns
             for group_num, col in enumerate(self.group_cols, 1):
                 # unique values as an extra row
-                self.matrix_info.loc['column info', col] = f"Group {group_num}"
+                # self.matrix_info.loc['column info', col] = f"Group {group_num}"
+                if self.group_labels != False:
+                    self.matrix_info.loc['column info', col] = \
+                        self.group_labels[group_num-1]
+                else:
+                    self.matrix_info.loc['column info', col] = \
+                        f"Group {group_num}"
+
                 # count of each unique value as an extra row
                 self.matrix_info.loc['count', col] = \
                     (self.matrix_df[col] == 1).sum()
 
             # wide to long
             df_tmp = self.matrix_df.copy()
+            # print_df(df_tmp)
             for num, row in df_tmp.iterrows():
                 for group_num, group_col in enumerate(self.group_cols, 1):
                     if row[group_col] == 1:
-                        df_tmp.loc[num, 'group'] = f'Group {group_num}'
+                        if self.group_labels != False:
+                            df_tmp.loc[num, 'group'] = f'{self.group_labels[group_num-1]}'
+                        else:
+                            df_tmp.loc[num, 'group'] = f'Group {group_num}'
+            # print_df(df_tmp)
                 
             # # non-group column
             self.covar_info_dict = {}
@@ -372,6 +396,28 @@ class RandomiseRun:
             print_df(self.matrix_info)
 
 
+def print_and_return_corrpMaps_summary(corrp_map_classes, sig_only=False):
+    """Print the information of each corrpMap in the corrp_map_classes list"""
+
+    print_head('Result summary')
+
+    df = pd.concat([x.df for x in corrp_map_classes], sort=False)
+    df = df.sort_values('file name')
+
+    if sig_only:
+        print_head('Only showing significant maps')
+        try:
+            df_sig = df.groupby('Significance').get_group(True)
+            print_df(df_sig.set_index(df_sig.columns[0]))
+        except KeyError:
+            print('There is no significant corrp map. Please return withtout '
+                  'the -so option')
+    else:
+        print_df(df.set_index(df.columns[0]))
+
+    return df
+
+
 class CorrpMap(RandomiseRun):
     """Multiple comparison corrected randomise output class
 
@@ -390,12 +436,20 @@ class CorrpMap(RandomiseRun):
     """
     def __init__(self, location, threshold=0.95,
                  contrast_file=False, matrix_file=False, **kwargs):
+        #TODO add group labels
+        #TODO add merged image location
+        #TODO add randomise script location and contents
         self.location = Path(location)
         self.name = self.location.name
         self.threshold = threshold
         self.contrast_file = contrast_file
         self.matrix_file = matrix_file
 
+        # group labels
+        if 'group_labels' in kwargs:
+            self.group_labels = kwargs.get('group_labels')
+        else:
+            self.group_labels = False
         # if caselist is given
         # in `get_corrp_map_classes`, '' is given as the caselist
         # when there is no caelist is given to the randomise_summary.py
@@ -456,24 +510,26 @@ class CorrpMap(RandomiseRun):
 
         # Below variables are to estimate number of significant voxels in each
         # hemisphere
-        self.fsl_dir = Path(environ['FSLDIR'])
-        self.fsl_data_dir = self.fsl_dir / 'data'
-
-        # enigma settings
-        self.enigma_dir = Path('/data/pnl/soft/pnlpipe3/tbss/data/enigmaDTI')
-        self.enigma_fa_loc = self.enigma_dir / 'ENIGMA_DTI_FA.nii.gz'
-        self.enigma_table = self.enigma_dir / 'ENIGMA_look_up_table.txt'
-        self.enigma_skeleton_mask_loc = self.enigma_dir / \
-            'ENIGMA_DTI_FA_skeleton_mask.nii.gz'
 
         # checking significance
         self.check_significance()
+
+        # template settings
+        self.template = kwargs.get('template')
+        self.template_settings()
+
         if self.significant:
             # if significant read in skeleton mask
-            self.mask_img = nb.load(str(self.enigma_skeleton_mask_loc))
-            self.mask_data = self.mask_img.get_data()
+            #TODO
+            # enigma settings
+            self.skel_mask_data = self.skel_mask_img.get_fdata()
+            self.mask_img, self.mask_data = get_nifti_img_data(
+                self.enigma_skeleton_mask_loc)
             self.get_significant_info()
             self.get_significant_overlap()
+
+            # uncache the skeleton data matrix
+            self.skel_mask_img.uncache()
 
         # summary in pandas DataFrame
         self.make_df()
@@ -487,8 +543,32 @@ class CorrpMap(RandomiseRun):
             self.get_contrast_info_english()
             self.update_with_contrast()
 
-        # summary in pandas DataFrame
-        # self.make_df()
+    def template_settings(self):
+        """Set TBSS template settings"""
+
+        # if given TBSS template is enigma
+        if self.template == 'enigma':
+            self.fsl_dir = Path(environ['FSLDIR'])
+            self.fsl_data_dir = self.fsl_dir / 'data'
+
+            self.enigma_dir = Path(
+                '/data/pnl/soft/pnlpipe3/tbss/data/enigmaDTI')
+            self.enigma_table = self.enigma_dir / 'ENIGMA_look_up_table.txt'
+            self.fa_bg_loc = self.enigma_dir / 'ENIGMA_DTI_FA.nii.gz'
+            self.skel_mask_loc = self.enigma_dir / \
+                'ENIGMA_DTI_FA_skeleton_mask.nii.gz'
+
+        # if given TBSS template is a string of the FA template
+        # eg) mean_FA.nii.gz
+        else:
+            self.fa_bg_loc = Path(self.template).absolute()
+            self.skel_mask_loc = re.sub('.nii.gz',
+                                        '_skeleton_mask.nii.gz',
+                                        str(self.fa_bg_loc))
+
+        # nibabel img
+        self.skel_mask_img = nb.load(str(self.skel_mask_loc))
+        self.fa_bg_img = nb.load(str(self.fa_bg_loc))
 
     def check_significance(self):
         """Any voxels with greater value than self.threshold
@@ -502,8 +582,7 @@ class CorrpMap(RandomiseRun):
         """
 
         # read corrp images
-        img = nb.load(str(self.location))
-        data = img.get_data()
+        img, data = get_nifti_img_data(self.location)
 
         # add data resolution attribute
         self.data_shape = data.shape
@@ -532,7 +611,7 @@ class CorrpMap(RandomiseRun):
         # total number of voxels in the skeleton
         # there could be voxels with 0 in corrp map
         # p value of 1 --> represented as 0
-        self.vox_num_total = np.count_nonzero(self.mask_data)
+        self.vox_num_total = np.count_nonzero(self.skel_mask_data)
 
         # number of significant voxels: greater or equal to 0.95 by default
         self.significant_voxel_num = \
@@ -560,9 +639,9 @@ class CorrpMap(RandomiseRun):
         Works for ENIGMA template randomise outputs.
         - x=90 as the cut off value for the left and right hemisphere
         """
-        right_mask = self.mask_data.copy()
+        right_mask = self.skel_mask_data.copy()
         right_mask[90:, :, :] = 0
-        left_mask = self.mask_data.copy()
+        left_mask = self.skel_mask_data.copy()
         left_mask[:90, :, :] = 0
 
         try:
@@ -583,7 +662,7 @@ class CorrpMap(RandomiseRun):
                 else:
                     setattr(self, f'significant_voxel_{side}_percent',
                             (significant_voxel_side_num /
-                                np.count_nonzero(self.mask_data)) * 100)
+                                np.count_nonzero(self.skel_mask_data)) * 100)
         except:
             print('** This study has a specific template. The number of '
                   'significant voxels in the left and right hemisphere '
@@ -602,8 +681,8 @@ class CorrpMap(RandomiseRun):
                 'Sig Mean': self.significant_voxel_mean,
                 'Sig Std': self.significant_voxel_std,
                 '% significant voxels': self.significant_voxel_percentage,
-                '% left': self.significant_voxel_left_percent,
-                '% right': self.significant_voxel_right_percent
+                # '% left': self.significant_voxel_left_percent,
+                # '% right': self.significant_voxel_right_percent
             })
 
             # round up columns that stars with percent
@@ -622,6 +701,14 @@ class CorrpMap(RandomiseRun):
                 'Significance': self.significant,
                 'Sig Max': self.voxel_max_p,
             })
+
+        self.file_df = pd.DataFrame({
+            'corrp map': [self.location],
+            'FA template': self.fa_bg_loc,
+            'merged skeleton': self.merged_4d_file})
+
+        # print_df(self.file_df)
+        # other information
 
     def update_with_contrast(self):
         '''Update CorrpMap class when there the contrast file is available
@@ -679,7 +766,7 @@ class CorrpMap(RandomiseRun):
             - parallelize
             - think about using all_modality_merged images?
         """
-        merged_4d_data = nb.load(str(self.merged_4d_file)).get_data()
+        merged_4d_data = get_nifti_data(self.merged_4d_file)
 
         # get a map with significant voxels
         significant_cluster_data = np.where(
@@ -776,6 +863,8 @@ class CorrpMap(RandomiseRun):
                          f'{self.tbss_fill_out}'
             self.tbssFigure = nifti_snapshot.TbssFigure(
                 image_files=[self.tbss_fill_out],
+                fa_bg=self.fa_bg_loc,
+                skeleton_bg=self.skel_mask_loc,
                 output_file=self.out_image_loc,
                 cmap_list=['autumn'],
                 cbar_titles=[self.cbar_title],
@@ -783,6 +872,8 @@ class CorrpMap(RandomiseRun):
                 title=self.title)
             # below is self.tbssFigure.create_figure_one_map()
             self.tbssFigure.images_mask_out_the_zero()
+
+            # self.tbssFigure.loop_through_axes_draw_bg()
             self.tbssFigure.loop_through_axes_draw_bg_tbss()
             self.tbssFigure.annotate_with_z()
             self.tbssFigure.loop_through_axes_draw_images()
@@ -799,6 +890,8 @@ class CorrpMap(RandomiseRun):
                          f'{self.location}'
             self.tbssFigure = nifti_snapshot.TbssFigure(
                 image_files=[str(self.location)],
+                fa_bg=self.fa_bg_loc,
+                skeleton_bg=self.skel_mask_loc,
                 output_file=self.out_image_loc,
                 cmap_list=['autumn'],
                 cbar_titles=[self.cbar_title],
@@ -809,6 +902,8 @@ class CorrpMap(RandomiseRun):
             # below is self.tbssFigure.create_figure_one_map()
             self.tbssFigure.images_mask_out_the_zero()
             self.tbssFigure.images_mask_by_threshold(0.95)
+
+            # self.tbssFigure.loop_through_axes_draw_bg()
             self.tbssFigure.loop_through_axes_draw_bg_tbss()
             self.tbssFigure.annotate_with_z()
             self.tbssFigure.loop_through_axes_draw_images_corrp_map(0.95)
@@ -822,23 +917,24 @@ class CorrpMap(RandomiseRun):
 
 
     def get_figure_enigma(self, **kwargs):
+        # TODO replace this function with nifti_snapshot
+        # TODO add skeleton check functions to the randomise_summary
         """Fig and axes attribute to CorrpMap"""
 
         # if study template is not ENIGMA
         if 'mean_fa' in kwargs:
             mean_fa_loc = kwargs.get('mean_fa')
             print(f'background image : {mean_fa_loc}')
-            self.enigma_fa_data = nb.load(mean_fa_loc).get_data()
+            self.enigma_fa_data = get_nifti_data(mean_fa_loc)
 
             mean_fa_skel_loc = re.sub('.nii.gz', '_skeleton.nii.gz',
                                       mean_fa_loc)
             print(f'background skeleton image: {mean_fa_skel_loc}')
-            self.enigma_skeleton_data = nb.load(mean_fa_skel_loc).get_data()
+            self.enigma_skeleton_data = get_nifti_data(mean_fa_skel_loc)
         else:
-            self.enigma_fa_data = nb.load(
-                str(self.enigma_fa_loc)).get_data()
-            self.enigma_skeleton_data = nb.load(
-                str(self.enigma_skeleton_mask_loc)).get_data()
+            self.enigma_fa_data = get_nifti_data(self.enigma_fa_loc)
+            self.enigma_skeleton_data = get_nifti_data(
+                    self.enigma_skeleton_mask_loc)
 
         # figure settings
         self.ncols = 5
@@ -877,7 +973,6 @@ class CorrpMap(RandomiseRun):
                 data = np.where(self.corrp_data == 0,
                                 np.nan,
                                 self.corrp_data)
-
         else:
             # Make voxels with their intensities lower than data_vmin
             # transparent
@@ -885,6 +980,7 @@ class CorrpMap(RandomiseRun):
                             np.nan,
                             self.corrp_data)
 
+        # TODO put below to above
         if hasattr(self, 'vmin'):
             vmin = self.vmin
         else:
@@ -898,86 +994,58 @@ class CorrpMap(RandomiseRun):
         else:
             vmax = 1
 
-        self.enigma_skeleton_data = np.where(
-            self.enigma_skeleton_data < 1,
-            np.nan,
-            self.enigma_skeleton_data)
+        # matrix_df[corrpMap.group_cols].astype(
+            # 'int').to_string(header=False, index=False).split('\n')
+            # fa_bg=self.fa_bg_loc,
+            # skeleton_bg=self.template,
+        self.tbssFigure = nifti_snapshot.TbssFigure(
+            template=self.template,
+            image_data_list=[data],
+            output_file=self.out_image_loc,
+            cmap_list=['autumn'],
+            cbar_titles=[self.cbar_title],
+            alpha_list=[1],
+            title=self.title)
 
-        # Make fig and axes
-        fig, axes = plt.subplots(ncols=self.ncols,
-                                 nrows=self.nrows,
-                                 figsize=(size_w * self.ncols,
-                                          size_h * self.nrows),
-                                 dpi=200)
+        # below is self.tbssFigure.create_figure_one_map()
+        self.tbssFigure.images_mask_out_the_zero()
+        self.tbssFigure.images_mask_by_threshold(0.95)
+        # self.tbssFigure.loop_through_axes_draw_bg()
+        self.tbssFigure.loop_through_axes_draw_bg_tbss()
+        self.tbssFigure.annotate_with_z()
+        self.tbssFigure.loop_through_axes_draw_images_corrp_map(0.95)
+        self.tbssFigure.cbar_x = 0.25
+        self.tbssFigure.cbar_width = 0.5
+        self.tbssFigure.add_cbars_horizontal()
 
-        # For each axis
-        for num, ax in enumerate(np.ravel(axes)):
-            # background FA map
-            img = ax.imshow(
-                np.flipud(self.enigma_fa_data[:, :, slice_nums[num]].T),
-                cmap='gray')
-
-            # background skeleton
-            img = ax.imshow(
-                np.flipud(self.enigma_skeleton_data[:, :, slice_nums[num]].T),
-                interpolation=None,
-                cmap='ocean')
-
-            # main data
-            if hasattr(self, 'corrp_data_filled'):
-                # tbss_fill FA maps
-                img = ax.imshow(np.flipud(data[:, :, slice_nums[num]].T),
-                                cmap='autumn',
-                                interpolation=None,
-                                vmin=0,
-                                vmax=1)
-            # elif hasattr(self, 'main_data_vmax'):
-                # # for skeleton std data plot
-                # if self.main_data_vmax == 'free':
-                    # img = ax.imshow(np.flipud(data[:, :, slice_nums[num]].T),
-                                    # interpolation=None,
-                                    # cmap='cool',
-                                    # vmin=0)
-            else:
-                # stat maps
-                img = ax.imshow(np.flipud(data[:, :, slice_nums[num]].T),
-                                interpolation=None,
-                                cmap='autumn',
-                                vmin=vmin,
-                                vmax=vmax)
-            ax.axis('off')
-            ax.annotate('z = {}'.format(slice_nums[num]),
-                        (0.01, 0.1),
-                        xycoords='axes fraction',
-                        color='white')
-
-        fig.subplots_adjust(hspace=0, wspace=0)
-
-        axbar = fig.add_axes([0.9, 0.2, 0.03, 0.6])
-        cb = fig.colorbar(img, axbar)
-        # Set y tick label color
-        cbytick_obj = plt.getp(cb.ax, 'yticklabels')
-
-        plt.style.use('dark_background')
-        plt.setp(cbytick_obj, color='white')
-        cb.outline.set_edgecolor('white')
-        cb.ax.yaxis.set_tick_params(color='white')
-
-        self.fig = fig
-        self.axes = axes
+        # self.fig = self.tbssFigure.fig
+        self.tbssFigure.fig.suptitle(
+            self.tbssFigure.title, y=0.92, fontsize=25)
+        self.tbssFigure.fig.savefig(self.tbssFigure.output_file, dpi=200)
 
     def tbss_fill(self):
-        command = f'tbss_fill  \
-                {self.location} \
-                {self.threshold} \
-                {self.enigma_fa_loc} {self.tbss_fill_out}'
+        if self.template == 'enigma':
+            command = f'tbss_fill  \
+                    {self.location} \
+                    {self.threshold} \
+                    {self.enigma_fa_loc} {self.tbss_fill_out}'
+        else:
+            command = f'tbss_fill  \
+                    {self.location} \
+                    {self.threshold} \
+                    {self.fa_bg_loc} {self.tbss_fill_out}'
+
         print(re.sub('\s+', ' ', command))
         os.popen(command).read()
 
 
 def skeleton_summary(corrpMap, warp_dir=False, caselist=False):
     """ Make summary from corrpMap, using its merged_skeleton"""
-    mergedSkeleton = MergedSkeleton(str(corrpMap.merged_4d_file))
+    mergedSkeleton = MergedSkeleton(
+            str(corrpMap.merged_4d_file),
+            corrpMap.skel_mask_loc)
+    mergedSkeleton.fa_bg_loc = corrpMap.fa_bg_loc
+
     mergedSkeleton.skeleton_level_summary()
     mergedSkeleton.subject_level_summary()
 
@@ -1103,17 +1171,18 @@ def skeleton_summary(corrpMap, warp_dir=False, caselist=False):
         # except:
             # pass
         mergedSkeleton.vmax = vmax
-        CorrpMap.get_figure_enigma(mergedSkeleton)
-        # dark figure background
-
-        # title
-        print('\t- ' + title)
-        mergedSkeleton.fig.suptitle(
-            title + f'\n{corrpMap.merged_4d_file}',
-            y=0.95, fontsize=20)
         out_image_loc = re.sub('.nii.gz', f'_{name_out_png}.png',
                                str(corrpMap.merged_4d_file))
-        mergedSkeleton.fig.savefig(out_image_loc, facecolor='black', dpi=200)
+        CorrpMap.out_image_loc = out_image_loc
+        CorrpMap.title = title + f'\n{corrpMap.merged_4d_file}'
+        CorrpMap.get_figure_enigma(mergedSkeleton)
+
+        # # title
+        # print('\t- ' + title)
+        # mergedSkeleton.fig.suptitle(
+            # title
+            # y=0.95, fontsize=20)
+        # mergedSkeleton.fig.savefig(out_image_loc, facecolor='black', dpi=200)
         plt.close()
 
 
@@ -1173,7 +1242,7 @@ The most simple way to use the script is
 
     argparser.add_argument(
         "--template", "-template", type=str, default='enigma',
-        help='FA template used (or created) in TBSS')
+        help='FA template used (or created) in TBSS - eg) mean_FA.nii.gz')
 
     argparser.add_argument(
         "--subject_values", "-s", action='store_true',
@@ -1223,42 +1292,36 @@ The most simple way to use the script is
         "--tbss_all_loc", "-tal", type=str, help='tbss_all output path')
 
     argparser.add_argument(
+        "--grouplabels", "-gl", type=str, nargs='+', default=False,
+        help='List of group names in the same order as the matrix')
+
+    argparser.add_argument(
         "--html_summary", "-hs", action='store_true',
         help='Create web summary from the randomise outputs')
 
     args = argparser.parse_args()
 
-    # get a list of corrp map paths based on the arg parse inputs
+    # Get a list of corrp map paths based on the arg parse inputs
     corrp_map_locs = get_corrp_map_locs(args)
 
-    # get a list of corrpMap objects
+    # Get a list of corrpMap objects ** this is where corrpMaps are formed
     corrp_map_classes = get_corrp_map_classes(corrp_map_locs, args)
 
-    # print matrix information of a corrpMap assuming all of corrpMaps have
-    # the same matrix and contrast
-    corrpMap = corrp_map_classes[0]
-    corrpMap.print_matrix_info()
+    # Print a matrix information of the first corrpMap in the corrp_map_classes
+    # assuming all of corrpMaps in the list have the same matrix and contrast
+    print_head('Matrix information')
+    corrp_map_classes[0].print_matrix_info()
 
     # TODO: move this to html summary
-    if args.cov_info and hasattr(corrpMap, 'covar_info_dict'):
+    if args.cov_info and hasattr(corrp_map_classes[0], 'covar_info_dict'):
         print_head('Covariate summary')
-        for col, table in corrpMap.covar_info_dict.items():
+        for col, table in corrp_map_classes[0].covar_info_dict.items():
             print(col)
             print_df(table)
 
-    print_head('Result summary')
-    df = pd.concat([x.df for x in corrp_map_classes], sort=False)
-    df = df.sort_values('file name')
-    if args.sig_only:
-        print_head('Only showing significant maps')
-        try:
-            df_sig = df.groupby('Significance').get_group(True)
-            print_df(df_sig.set_index(df_sig.columns[0]))
-        except KeyError:
-            print('There is no significant corrp map. Please return withtout '
-                  'the -so option')
-    else:
-        print_df(df.set_index(df.columns[0]))
+    # Print information of each corrpMap
+    df = print_and_return_corrpMaps_summary(corrp_map_classes,
+                                            sig_only=args.sig_only)
 
     # if atlas query option is on
     if args.atlasquery:
@@ -1282,9 +1345,11 @@ The most simple way to use the script is
                         str(corrpMap.location))
                     corrpMap.tbss_fill()
                     corrpMap.get_figure()
-                else:
+                    plt.close()
+
+                if args.figure:
                     corrpMap.get_figure()
-                plt.close()
+                    plt.close()
 
     # TODO : check the structure below
     # if merged image location is not given
@@ -1292,7 +1357,7 @@ The most simple way to use the script is
         if args.subject_values or args.skeleton_summary:
             # make sure all the input corrp maps are in the same directory
             check_corrp_map_locations(corrp_map_classes)
-            args.merged_img_dir = str(corrpMap.location.parent)
+            args.merged_img_dir = str(corrp_map_classes[0].location.parent)
 
     # if subject_values option is given
     if args.subject_values:
@@ -1307,7 +1372,9 @@ The most simple way to use the script is
                     mergedSkeleton = modal_ms_dict[corrpMap.modality]
                     mergedSkeleton.update_with_corrpMap(corrpMap)
                 else:
-                    mergedSkeleton = MergedSkeleton(corrpMap.merged_4d_file)
+                    mergedSkeleton = MergedSkeleton(
+                        corrpMap.merged_4d_file,
+                        corrpMap.skel_mask_loc)
                     mergedSkeleton.update_with_corrpMap(corrpMap)
 
                     # if there is a need to save mergedSkeleton
@@ -1406,4 +1473,4 @@ The most simple way to use the script is
     if args.html_summary:
         create_html(corrp_map_classes, df, args)
         print(f'HTML summary is saved in '
-              f"{corrpMap.location.parent / 'randomise_summary.html'}")
+              f"{corrp_map_classes[0].location.parent / 'randomise_summary.html'}")

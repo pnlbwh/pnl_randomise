@@ -1,8 +1,5 @@
 #!/data/pnl/kcho/anaconda3/bin/python
 
-# nifti
-import nibabel as nb
-
 # table and array
 import numpy as np
 import pandas as pd
@@ -23,14 +20,15 @@ import argparse
 from itertools import combinations
 from stats import anova, ttest
 
+from pnl_randomise_utils import get_nifti_data, get_nifti_img_data
 
-def get_average_for_each_volume(merged_skeleton_data, mask):
-    """Get average of values in the mask for each volume"""
+def get_average_for_each_volume(data, mask):
+    """Get average of values in the mask for each volume in 4d matrix"""
     cluster_averages = {}
     # Get average of values in the `significant_cluster_data` map
     # for each skeleton volume
-    for vol_num in np.arange(merged_skeleton_data.shape[3]):
-        vol_data = merged_skeleton_data[:, :, :, vol_num]
+    for vol_num in np.arange(data.shape[3]):
+        vol_data = data[:, :, :, vol_num]
         average = vol_data[mask == 1].mean()
         cluster_averages[vol_num] = average
     return cluster_averages
@@ -38,32 +36,25 @@ def get_average_for_each_volume(merged_skeleton_data, mask):
 
 class MergedSkeleton:
     """TBSS all_modality_skeleton map object"""
-    def __init__(self, merged_skeleton_loc, template='enigma'):
-        """Read in merged skeleton nifti file"""
+    def __init__(self, merged_skeleton_loc, mask_loc):
+        """initialize mergedSkeleton object"""
         self.merged_skeleton_loc = merged_skeleton_loc
-        self.merged_skeleton_img = nb.load(str(self.merged_skeleton_loc))
+
+        # load merged skeleton nifti
         print(f"Reading {merged_skeleton_loc}")
-        self.merged_skeleton_data = self.merged_skeleton_img.get_fdata()
+        self.merged_skeleton_img, self.merged_skeleton_data = \
+                get_nifti_img_data(merged_skeleton_loc)
         print(f"Completed reading {merged_skeleton_loc}")
 
-        # data shape
-        # self.data_shape = self.
-
-        # ENIGMA
-        print(f"Reading enigma skeleton mask")
-        self.enigma_dir = Path('/data/pnl/soft/pnlpipe3/tbss/data/enigmaDTI')
-        self.enigma_fa_loc = self.enigma_dir / 'ENIGMA_DTI_FA.nii.gz'
-        self.enigma_skeleton_mask_loc = self.enigma_dir / \
-            'ENIGMA_DTI_FA_skeleton_mask.nii.gz'
-        self.mask_data = nb.load(
-            str(self.enigma_skeleton_mask_loc)).get_fdata() == 1
-        print(f"Completed reading enigma skeleton mask")
+        # load mask as boolean array
+        self.mask_data = get_nifti_data(mask_loc) == 1
 
         # binarize merged skeleton map
         print(f"Estimating sum of binarized skeleton maps for all subject")
         self.merged_skeleton_data_bin_sum = np.sum(
             np.where(self.merged_skeleton_data == 0, 0, 1),
             axis=3)
+
         print(f"Estimating mean of binarized skeleton maps for all subject")
         self.merged_skeleton_data_bin_mean = np.mean(
             np.where(self.merged_skeleton_data == 0, 0, 1),
@@ -192,7 +183,7 @@ class MergedSkeleton:
             vol_data = self.merged_skeleton_data[:, :, :, vol_num]
             subject_id = cases[vol_num]
             warp_data_loc = list(Path(warp_dir).glob(f'*{subject_id}*'))[0]
-            warp_data = nb.load(str(warp_data_loc)).get_data()
+            warp_data = get_nifti_data(warp_data_loc)
             # zero where the mask is not zero
             zero_in_the_skeleton_coord = np.where(
                 (self.mask_data == 1) & (vol_data == 0)
@@ -209,7 +200,7 @@ class MergedSkeleton:
             subject_nonzero_stds: list, std of non-zero skeleton
         """
 
-        mask_data = nb.load(mask).get_data()
+        mask_data = get_nifti_data(mask)
         mask_data = np.where(mask_data > threshold, 1, 0)
 
         # Non-zero mean values in each subject skeleton
@@ -251,7 +242,7 @@ class SkeletonDir:
     def summary(self):
         """Summarize skeleton"""
         # list of all skeleton nifti files in numpy arrays
-        arrays = [nb.load(str(x)).get_data() for x in self.skeleton_files]
+        arrays = [get_nifti_data(x) for x in self.skeleton_files]
 
         # merge skeleton files
         self.merged_skeleton_data = np.stack(arrays, axis=3)
@@ -313,6 +304,8 @@ class SkeletonDir:
 
         self.g.ax.set_xticklabels([get_ticklabels(self.df, x) for x in
                                    self.df.group.unique()])
+        # group_list = corrpMap.group_labels
+        # print(group_list)
 
         # average line
         line_width = 0.3
@@ -475,7 +468,7 @@ class SkeletonDirSig(SkeletonDir):
     def summary(self):
         """Summarize skeleton"""
         # list of all skeleton nifti files in numpy arrays
-        arrays = [nb.load(str(x)).get_data() for x in self.skeleton_files]
+        arrays = [get_nifti_data(x) for x in self.skeleton_files]
 
         # merge skeleton files
         self.merged_skeleton_data = np.stack(arrays, axis=3)
@@ -501,13 +494,13 @@ class SkeletonDirSig(SkeletonDir):
 
 
 
-def skeleton_summary(merged_4d_file, tbss_all_loc, **kwargs):
+def skeleton_summary(merged_4d_file, skeleton_mask, tbss_all_loc, **kwargs):
     """ Make summary from corrpMap, using its merged_skeleton"""
     caselist = str(Path(tbss_all_loc) / 'log/caselist.txt')
 
 
     # update with design contrast and matrix
-    mergedSkeleton = MergedSkeleton(merged_4d_file)
+    mergedSkeleton = MergedSkeleton(merged_4d_file, skelton_mask)
 
     if 'directory' in kwargs:
         location = kwargs.get('directory')
@@ -609,6 +602,11 @@ The most simple way to use the script is
         help='Merged 4d file')
 
     argparser.add_argument(
+        "--skeleton_mask", "-m",
+        type=str,
+        help='Merged 4d file')
+
+    argparser.add_argument(
         "--warp_dir", "-w",
         type=str,
         help='warp dir')
@@ -626,8 +624,13 @@ The most simple way to use the script is
     args = argparser.parse_args()
 
     if args.dir:
-        skeleton_summary(args.merged_4d_file, args.tbss_all_loc,
+        skeleton_summary(args.merged_4d_file,
+                         args.skeleton_mask,
+                         args.tbss_all_loc,
                          directory=args.dir)
     else:
-        skeleton_summary(args.merged_4d_file, args.tbss_all_loc,
-                         matrix=args.matrix, contrast=args.contrast)
+        skeleton_summary(args.merged_4d_file, 
+                         args.skeleton_mask,
+                         args.tbss_all_loc,
+                         matrix=args.matrix, 
+                         contrast=args.contrast)

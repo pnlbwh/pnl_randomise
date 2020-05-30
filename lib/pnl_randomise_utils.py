@@ -1,10 +1,41 @@
-from pathlib import Path
+#!/bin/python
+
+"""
+pnl_randomise utils
+"""
+
+import nibabel as nb
 from tabulate import tabulate
+from pathlib import Path
 from itertools import product
 import inquirer
 
+def get_nifti_data(img_loc):
+    """return matrix from nibabel loaded nifti
+    Key arguments
+        img_loc: Path or string of nifti image
+
+    Returns:
+        numpy array of the data
+    """
+    return nb.load(str(img_loc)).get_fdata()
+
+
+def get_nifti_img_data(img_loc):
+    """return nibabel img and matrix from nibabel loaded nifti
+    Key arguments
+        img_loc: Path or string of nifti image
+
+    Returns:
+        (nibabel img, numpy array of the data)
+    """
+    img = nb.load(str(img_loc))
+    data = img.get_fdata()
+    return img, data
+
 
 def print_head(heading):
+    """Print headings"""
     print()
     print('-'*80)
     print(f'* {heading}')
@@ -21,9 +52,12 @@ def print_df(df):
     print(tabulate(df, headers='keys', tablefmt='psql'))
     print()
 
+
 def print_warning(warning):
+    """Print warning"""
     print_head('Warning')
     print(warning)
+
 
 def search_and_select_one(name: str, location: str,
                           list_of_patterns: list, depth=1):
@@ -64,9 +98,9 @@ def search_and_select_one(name: str, location: str,
     # search files
     matching_files = []
     for s_dir, pat in list_of_dir_pat:
-        mf = list(Path(s_dir).glob(pat))
-        if len(mf) > 0:
-            matching_files += mf
+        matching_file = list(Path(s_dir).glob(pat))
+        if matching_file != []:
+            matching_files += matching_file
         else:
             pass
     matching_files = list(set(matching_files))

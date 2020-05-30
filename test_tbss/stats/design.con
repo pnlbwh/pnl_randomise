@@ -1,8 +1,0 @@
-/ContrastName1 Control < OCD
-/ContrastName2 Control > OCD
-/NumWaves       4
-/NumContrasts	2
-/PPheights	2	2	0	0
-/Matrix
-1	-1	0	0
--1	1	0	0

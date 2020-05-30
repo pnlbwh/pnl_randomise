@@ -4,7 +4,6 @@ from pathlib import Path
 import tempfile
 
 # Imaging
-import nibabel as nb
 import argparse
 import pandas as pd
 import re
@@ -19,7 +18,7 @@ import matplotlib.pyplot as plt
 from scipy import ndimage
 
 # utils
-from fsl_randomise_utils import *
+from pnl_randomise_utils import get_nifti_data, get_nifti_img_data
 
 
 '''
@@ -39,16 +38,11 @@ class FA:
         self.fa = kwargs.pop('fa')
         self.mask = kwargs.pop('mask')
 
-
     def read_fa_maps(self):
-        self.fa_img = nb.load(self.fa)
-        self.fa_data = self.fa_img.get_data()
-
+        self.fa_img, self.fa_data = get_nifti_img_data(self.fa)
 
     def read_mask_maps(self):
-        self.mask_img = nb.load(self.mask)
-        self.mask_data = self.mask_img.get_data()
-    
+        self.mask_img, self.mask_data = get_nifti_img_data(self.mask)
 
     def zero_FA_within_mask(self):
         self.read_fa_maps()
@@ -59,7 +53,6 @@ class FA:
 
         if (self.zero_within_mask).any():
             return True
-
 
     def get_distance_from_nearest_zero(self):
         pass
