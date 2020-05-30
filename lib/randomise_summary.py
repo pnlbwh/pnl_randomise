@@ -582,7 +582,6 @@ class CorrpMap(RandomiseRun):
                              voxels greater than `self.threshold`)
         """
 
-        # Read the corrected p image
         # read corrp images
         img, data = get_nifti_img_data(self.location)
 
@@ -874,6 +873,7 @@ class CorrpMap(RandomiseRun):
                 title=self.title)
             # below is self.tbssFigure.create_figure_one_map()
             self.tbssFigure.images_mask_out_the_zero()
+
             # self.tbssFigure.loop_through_axes_draw_bg()
             self.tbssFigure.loop_through_axes_draw_bg_tbss()
             self.tbssFigure.annotate_with_z()
@@ -903,6 +903,7 @@ class CorrpMap(RandomiseRun):
             # below is self.tbssFigure.create_figure_one_map()
             self.tbssFigure.images_mask_out_the_zero()
             self.tbssFigure.images_mask_by_threshold(0.95)
+
             # self.tbssFigure.loop_through_axes_draw_bg()
             self.tbssFigure.loop_through_axes_draw_bg_tbss()
             self.tbssFigure.annotate_with_z()
@@ -1047,6 +1048,7 @@ def skeleton_summary(corrpMap, warp_dir=False, caselist=False):
             str(corrpMap.merged_4d_file),
             corrpMap.skel_mask_loc)
     mergedSkeleton.fa_bg_loc = corrpMap.fa_bg_loc
+
     mergedSkeleton.skeleton_level_summary()
     mergedSkeleton.subject_level_summary()
 
