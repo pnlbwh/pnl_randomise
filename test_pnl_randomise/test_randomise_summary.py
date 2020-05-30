@@ -1,5 +1,11 @@
-from randomise_summary import *
 import os
+import sys
+
+dir_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+print(dir_path)
+sys.path.append(os.path.join(dir_path, 'lib'))
+
+from randomise_summary import *
 from pathlib import Path
 
 def corrpMap_test():
@@ -49,7 +55,8 @@ def corrpMap_test():
 
 
 def corrpMap_update_with_contrast_test():
-    location = 'test_tbss/stats/tbss_FW_tfce_corrp_tstat1.nii.gz'
+    location = '../test_tbss/stats/tbss_FW_tfce_corrp_tstat1.nii.gz'
+    print(location)
     threshold = 0.95
     corrpMap = CorrpMap(location, threshold)
 
@@ -189,7 +196,6 @@ def corrpMap_figure():
     threshold = 0.95
     corrpMap = CorrpMap(location, threshold)
     corrpMap.get_figure_enigma()
-
 
 
 if __name__ == "__main__":
