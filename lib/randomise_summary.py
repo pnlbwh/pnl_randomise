@@ -12,6 +12,7 @@ from scipy import ndimage
 
 # Imaging
 import argparse
+import nibabel as nb
 import pandas as pd
 import re
 import numpy as np
@@ -522,14 +523,12 @@ class CorrpMap(RandomiseRun):
             # if significant read in skeleton mask
             #TODO
             # enigma settings
-            self.skel_mask_data = self.skel_mask_img.get_fdata()
-            self.mask_img, self.mask_data = get_nifti_img_data(
-                self.enigma_skeleton_mask_loc)
+            skel_img, self.skel_mask_data = get_nifti_img_data(self.skel_mask_loc)
             self.get_significant_info()
             self.get_significant_overlap()
 
             # uncache the skeleton data matrix
-            self.skel_mask_img.uncache()
+            skel_img.uncache()
 
         # summary in pandas DataFrame
         self.make_df()
@@ -554,7 +553,9 @@ class CorrpMap(RandomiseRun):
             self.enigma_dir = Path(
                 '/data/pnl/soft/pnlpipe3/tbss/data/enigmaDTI')
             self.enigma_table = self.enigma_dir / 'ENIGMA_look_up_table.txt'
+            # self.fa_bg_loc = Path(self.template).absolute() / 'mean_FA.nii.gz'
             self.fa_bg_loc = self.enigma_dir / 'ENIGMA_DTI_FA.nii.gz'
+            self.mean_fa = self.location.parent / 'mean_FA.nii.gz'
             self.skel_mask_loc = self.enigma_dir / \
                 'ENIGMA_DTI_FA_skeleton_mask.nii.gz'
 
@@ -566,9 +567,9 @@ class CorrpMap(RandomiseRun):
                                         '_skeleton_mask.nii.gz',
                                         str(self.fa_bg_loc))
 
-        # nibabel img
-        self.skel_mask_img = nb.load(str(self.skel_mask_loc))
-        self.fa_bg_img = nb.load(str(self.fa_bg_loc))
+        # # nibabel img
+        # self.skel_mask_img = nb.load(str(self.skel_mask_loc))
+        # self.fa_bg_img = nb.load(str(self.fa_bg_loc))
 
     def check_significance(self):
         """Any voxels with greater value than self.threshold
@@ -581,14 +582,9 @@ class CorrpMap(RandomiseRun):
                              voxels greater than `self.threshold`)
         """
 
-<<<<<<< HEAD
         # Read the corrected p image
-        img = nb.load(str(self.location))
-        data = img.get_data()
-=======
         # read corrp images
         img, data = get_nifti_img_data(self.location)
->>>>>>> 7afd095af1f5dc55f30709df2ac9867c3c4f1ac5
 
         # add data resolution attribute
         self.data_shape = data.shape
@@ -925,8 +921,6 @@ class CorrpMap(RandomiseRun):
         # TODO add skeleton check functions to the randomise_summary
         """Fig and axes attribute to CorrpMap"""
 
-<<<<<<< HEAD
-=======
         # if study template is not ENIGMA
         if 'mean_fa' in kwargs:
             mean_fa_loc = kwargs.get('mean_fa')
@@ -938,7 +932,8 @@ class CorrpMap(RandomiseRun):
             print(f'background skeleton image: {mean_fa_skel_loc}')
             self.enigma_skeleton_data = get_nifti_data(mean_fa_skel_loc)
         else:
-            self.enigma_fa_data = get_nifti_data(self.enigma_fa_loc)
+            # self.enigma_fa_data = get_nifti_data(self.enigma_fa_loc)
+            self.enigma_fa_data = get_nifti_data(self.fa_bg_loc)
             self.enigma_skeleton_data = get_nifti_data(
                     self.enigma_skeleton_mask_loc)
 
@@ -967,7 +962,6 @@ class CorrpMap(RandomiseRun):
                                z_slice_center+(nslice * slice_gap),
                                slice_gap)[::2]
 
->>>>>>> 7afd095af1f5dc55f30709df2ac9867c3c4f1ac5
         # if corrpMap.corrp_data_filled exist
         if hasattr(self, 'corrp_data_filled'):
             data = np.where(self.corrp_data_filled == 0,
@@ -1035,7 +1029,8 @@ class CorrpMap(RandomiseRun):
             command = f'tbss_fill  \
                     {self.location} \
                     {self.threshold} \
-                    {self.enigma_fa_loc} {self.tbss_fill_out}'
+                    {self.mean_fa} {self.tbss_fill_out}'
+                    # {self.enigma_fa_loc} {self.tbss_fill_out}'
         else:
             command = f'tbss_fill  \
                     {self.location} \
@@ -1043,20 +1038,15 @@ class CorrpMap(RandomiseRun):
                     {self.fa_bg_loc} {self.tbss_fill_out}'
 
         print(re.sub('\s+', ' ', command))
-        os.popen(command).read()
+        print(os.popen(command).read())
 
 
 def skeleton_summary(corrpMap, warp_dir=False, caselist=False):
     """ Make summary from corrpMap, using its merged_skeleton"""
-<<<<<<< HEAD
     mergedSkeleton = MergedSkeleton(
             str(corrpMap.merged_4d_file),
             corrpMap.skel_mask_loc)
     mergedSkeleton.fa_bg_loc = corrpMap.fa_bg_loc
-=======
-    mergedSkeleton = MergedSkeleton(corrpMap.merged_4d_file,
-                                    corrpMap.skelton_mask)
->>>>>>> 7afd095af1f5dc55f30709df2ac9867c3c4f1ac5
     mergedSkeleton.skeleton_level_summary()
     mergedSkeleton.subject_level_summary()
 
@@ -1355,6 +1345,7 @@ The most simple way to use the script is
                         '.nii.gz', '_filled.nii.gz',
                         str(corrpMap.location))
                     corrpMap.tbss_fill()
+                    print('hahah')
                     corrpMap.get_figure()
                     plt.close()
 
