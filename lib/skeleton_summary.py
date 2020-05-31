@@ -39,6 +39,7 @@ class MergedSkeleton:
     def __init__(self, merged_skeleton_loc, mask_loc):
         """initialize mergedSkeleton object"""
         self.merged_skeleton_loc = merged_skeleton_loc
+        self.skel_mask_loc = mask_loc
 
         # load merged skeleton nifti
         print(f"Reading {merged_skeleton_loc}")

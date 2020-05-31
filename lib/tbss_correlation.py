@@ -371,6 +371,8 @@ class ValuesExtracted:
                 if row[col] < threshold:
                     sig_num += 1
 
+        # print(sig_num)
+
         height = math.ceil(sig_num/3) * 5
         fig, axes = plt.subplots(
                 ncols=3,
@@ -381,6 +383,7 @@ class ValuesExtracted:
         for col_num, col in enumerate(self.p_df.columns):
             for index, row in self.p_df.iterrows():
                 if row[col] < threshold:
+                    ax = np.ravel(axes)[ax_num]
 
                     p = self.p_df.loc[index, col]
                     r = self.r_df.loc[index, col]
@@ -389,23 +392,24 @@ class ValuesExtracted:
                         tmp_df = self.all_df[self.all_df.label.isin(['nonNPSLE', 'NPSLE'])][[index, col]]
                     else:
                         tmp_df = self.all_df[self.all_df.label == group][[index, col]]
-                    print(ax_num)
-                    try:
-                        sns.regplot(x=index, y=col, data=tmp_df, ax=np.ravel(axes)[ax_num])
-                        np.ravel(axes)[ax_num].set_ylabel(self.sig_cols_simple[col_num])
-                    except:
-                        print(ax_num, 'error')
-                        print('axlen', len(np.ravel(axes)))
-                        print(index, col)
-                        pass
-                    np.ravel(axes)[ax_num].text(0.5, 0.9, f'r = {r:.3f}, P = {p:.3f}',
+
+                    sns.regplot(x=index, y=col, data=tmp_df, ax=ax)
+                    ax.set_ylabel(self.sig_cols_simple[col_num])
+                    ax.text(0.5, 0.9, f'r = {r:.3f}, P = {p:.3f}',
                             ha='center',
-                            transform=np.ravel(axes)[ax_num].transAxes)
+                            transform=ax.transAxes)
+                    ax.text(0.5, 0.1, f'n = {len(tmp_df.dropna())}',
+                            ha='center',
+                            transform=ax.transAxes)
                     ax_num += 1
 
         fig.subplots_adjust(wspace=1.3)
         fig.tight_layout()
-        fig.subplots_adjust(top=1-(0.15/axes.shape[1]))
+        print(axes.shape)
+        try:
+            fig.subplots_adjust(top=1-(0.15/axes.shape[1]))
+        except:
+            fig.subplots_adjust(top=0.83)
         fig.suptitle(
              f'{self.correlation_name} p-values\nbetween the values in '
              f'the significant clusters VS clinical variables in '
