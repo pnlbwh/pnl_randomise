@@ -35,7 +35,7 @@ def create_html(corrpMaps, df, args):
     git_hash = os.popen(command).read()
 
     corrpMaps = order_corrpMaps(corrpMaps)
-    root = os.path.dirname(os.path.abspath(__file__))
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     templates_dir = os.path.join(root, 'templates')
     env = Environment(loader=FileSystemLoader(templates_dir))
     template = env.get_template('template.html')

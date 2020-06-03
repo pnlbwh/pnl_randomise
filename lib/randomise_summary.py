@@ -1208,6 +1208,9 @@ def skeleton_summary(corrpMap, warp_dir=False, caselist=False):
         mergedSkeleton.vmax = vmax
         out_image_loc = re.sub('.nii.gz', f'_{name_out_png}.png',
                                str(corrpMap.merged_4d_file))
+        mergedSkeleton.out_image_loc = out_image_loc
+        mergedSkeleton.cbar_title = title
+        mergedSkeleton.title = title
         CorrpMap.out_image_loc = out_image_loc
         CorrpMap.title = title + f'\n{corrpMap.merged_4d_file}'
         CorrpMap.get_figure_enigma(mergedSkeleton)
