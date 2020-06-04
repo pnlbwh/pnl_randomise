@@ -548,7 +548,6 @@ class CorrpMap(RandomiseRun):
             # if significant read in skeleton mask
             #TODO
             # enigma settings
-            print(self.skel_mask_loc)
             skel_img, self.skel_mask_data = get_nifti_img_data(self.skel_mask_loc)
             self.get_significant_info()
             self.get_significant_overlap()
