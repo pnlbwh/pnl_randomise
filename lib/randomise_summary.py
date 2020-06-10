@@ -1310,7 +1310,7 @@ def create_figure(args: object, corrp_map_classes: List[CorrpMap]) -> None:
                     plt.close()
 
                 if args.figure:
-                    corrpMap.get_figure()
+                    corrpMap.get_figure(figure_same_slice=args.figure_same_slice)
                     plt.close()
 
 
