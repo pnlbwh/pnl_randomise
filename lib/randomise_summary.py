@@ -881,12 +881,13 @@ class CorrpMap(RandomiseRun):
         """Get corrpMap figure"""
         self.cbar_title = f'{self.modality} {self.contrast_text}'
 
-        # for tbss fill option
-        if hasattr(self, 'tbss_fill_out'):
+        if hasattr(self, 'tbss_fill_out'): # for tbss fill option
             self.out_image_loc = re.sub(
                 '.nii.gz', '.png', str(self.tbss_fill_out))
             self.title = f'{self.modality} {self.contrast_text}\n' \
                          f'{self.tbss_fill_out}'
+
+            # vmin and vmax list given
             self.tbssFigure = nifti_snapshot.TbssFigure(
                 image_files=[self.tbss_fill_out],
                 fa_bg=self.fa_bg_loc,
@@ -895,9 +896,11 @@ class CorrpMap(RandomiseRun):
                 cmap_list=['autumn'],
                 cbar_titles=[self.cbar_title],
                 alpha_list=[1],
-                title=self.title)
+                title=self.title,
+                tbss_filled=True)
+
             # below is self.tbssFigure.create_figure_one_map()
-            self.tbssFigure.images_mask_out_the_zero()
+            # self.tbssFigure.images_mask_out_the_zero()
 
             # self.tbssFigure.loop_through_axes_draw_bg()
             self.tbssFigure.loop_through_axes_draw_bg_tbss()
@@ -905,7 +908,9 @@ class CorrpMap(RandomiseRun):
             self.tbssFigure.loop_through_axes_draw_images()
             self.tbssFigure.cbar_x = 0.25
             self.tbssFigure.cbar_width = 0.5
-            self.tbssFigure.add_cbars_horizontal()
+
+            
+            self.tbssFigure.add_cbars_horizontal_tbss_filled()
             self.tbssFigure.fig.suptitle(
                 self.tbssFigure.title, y=0.92, fontsize=25)
             self.tbssFigure.fig.savefig(self.tbssFigure.output_file, dpi=200)
@@ -1293,7 +1298,6 @@ def create_figure(args: object, corrp_map_classes: List[CorrpMap]) -> None:
                         '.nii.gz', '_filled.nii.gz',
                         str(corrpMap.location))
                     corrpMap.tbss_fill()
-                    print('hahah')
                     corrpMap.get_figure()
                     plt.close()
 
