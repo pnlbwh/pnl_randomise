@@ -881,14 +881,16 @@ class CorrpMap(RandomiseRun):
         """Get corrpMap figure"""
         self.cbar_title = f'{self.modality} {self.contrast_text}'
 
+        # same slice
+        if 'figure_same_slice' in kwargs:
+            same_slice = kwargs.get('figure_same_slice')
+
         if hasattr(self, 'tbss_fill_out'): # for tbss fill option
             self.out_image_loc = re.sub(
                 '.nii.gz', '.png', str(self.tbss_fill_out))
             self.title = f'{self.modality} {self.contrast_text}\n' \
                          f'{self.tbss_fill_out}'
 
-            if 'figure_same_slice' in kwargs:
-                same_slice = kwargs.get('figure_same_slice')
 
             # vmin and vmax list given
             self.tbssFigure = nifti_snapshot.TbssFigure(
@@ -932,7 +934,9 @@ class CorrpMap(RandomiseRun):
                 cbar_titles=[self.cbar_title],
                 alpha_list=[1],
                 cbar_ticks=[0.95, 1],
-                title=self.title)
+                title=self.title,
+                same_slice=same_slice)
+
 
             # below is self.tbssFigure.create_figure_one_map()
             self.tbssFigure.images_mask_out_the_zero()
