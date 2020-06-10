@@ -887,6 +887,9 @@ class CorrpMap(RandomiseRun):
             self.title = f'{self.modality} {self.contrast_text}\n' \
                          f'{self.tbss_fill_out}'
 
+            if 'figure_same_slice' in kwargs:
+                same_slice = kwargs.get('figure_same_slice')
+
             # vmin and vmax list given
             self.tbssFigure = nifti_snapshot.TbssFigure(
                 image_files=[self.tbss_fill_out],
@@ -897,7 +900,8 @@ class CorrpMap(RandomiseRun):
                 cbar_titles=[self.cbar_title],
                 alpha_list=[1],
                 title=self.title,
-                tbss_filled=True)
+                tbss_filled=True,
+                same_slice=same_slice)
 
             # below is self.tbssFigure.create_figure_one_map()
             # self.tbssFigure.images_mask_out_the_zero()
@@ -1298,7 +1302,7 @@ def create_figure(args: object, corrp_map_classes: List[CorrpMap]) -> None:
                         '.nii.gz', '_filled.nii.gz',
                         str(corrpMap.location))
                     corrpMap.tbss_fill()
-                    corrpMap.get_figure()
+                    corrpMap.get_figure(figure_same_slice=args.figure_same_slice)
                     plt.close()
 
                 if args.figure:
@@ -1509,6 +1513,10 @@ The most simple way to use the script is
     argparser.add_argument(
         "--tbss_fill", "-tf", action='store_true',
         help='Create figures with tbss_fill outputs')
+
+    argparser.add_argument(
+        "--figure_same_slice", "-fss", action='store_true',
+        help='use with -f or -tf, to get consistent slices for all figure')
 
     argparser.add_argument(
         "--skeleton_summary", "-ss", action='store_true',
