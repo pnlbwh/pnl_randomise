@@ -5,10 +5,16 @@ pnl_randomise utils
 """
 
 import nibabel as nb
+import re
+import numpy as np
+import pandas as pd
+import os
 from tabulate import tabulate
 from pathlib import Path
 from itertools import product
 import inquirer
+
+from typing import Union, List, Tuple
 
 def get_nifti_data(img_loc):
     """return matrix from nibabel loaded nifti

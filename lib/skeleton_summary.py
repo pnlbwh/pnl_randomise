@@ -8,9 +8,6 @@ import pandas as pd
 import re
 from pathlib import Path
 
-# import print option
-# from kchopy.kcho_utils import print_df
-
 # figure
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -21,6 +18,9 @@ from itertools import combinations
 from stats import anova, ttest
 
 from pnl_randomise_utils import get_nifti_data, get_nifti_img_data
+from pnl_randomise_utils import print_head
+from typing import List
+
 
 def get_average_for_each_volume(data, mask):
     """Get average of values in the mask for each volume in 4d matrix"""
@@ -494,8 +494,165 @@ class SkeletonDirSig(SkeletonDir):
         })
 
 
+def skeleton_summary(corrpMap, warp_dir=False, caselist=False):
+    """ Make summary from corrpMap, using its merged_skeleton"""
+    mergedSkeleton = MergedSkeleton(
+            str(corrpMap.merged_4d_file),
+            corrpMap.skel_mask_loc)
 
-def skeleton_summary(merged_4d_file, skeleton_mask, tbss_all_loc, **kwargs):
+    mergedSkeleton.fa_bg_loc = corrpMap.fa_bg_loc
+    mergedSkeleton.template = corrpMap.template
+
+    # mergedSkeleton.out_image_loc = 'tmp.png'
+    # mergedSkeleton.cbar_title = 'tmp'
+    # mergedSkeleton.title = 'tmp'
+
+    mergedSkeleton.skeleton_level_summary()
+    mergedSkeleton.subject_level_summary()
+
+
+    # set modality of the merged skeleton file
+    mergedSkeleton.modality = corrpMap.modality
+
+    # get a list of groups
+    # TODO: here might be changed into actual group names
+    group_list = corrpMap.matrix_df[corrpMap.group_cols].astype(
+        'int').to_string(header=False, index=False).split('\n')
+
+    # create a dataframe that has
+    # - mean of values in the non zero skeleton for each subject
+    # - standard deviation of values in the nonzero skeleton for each subject
+    print('Creating figures to summarize information from the skeletons')
+    if warp_dir and caselist:
+        print(f'Using information in {warp_dir} to '
+              'extract values in warped maps')
+
+        mergedSkeleton.subject_level_summary_with_warp(warp_dir, caselist)
+        mergedSkeleton.df = pd.DataFrame({
+            'subject': corrpMap.matrix_df.index,
+            'mean': mergedSkeleton.subject_nonzero_means,
+            'skeleton_volume': mergedSkeleton.subject_nonzero_voxel_count,
+            'skeleton non_zero_std': mergedSkeleton.subject_nonzero_stds,
+            'zero_skeleton':mergedSkeleton.subject_zero_skeleton_values,
+            'group': group_list
+            })
+        SkeletonDir.get_subject_zero_skeleton_figure(mergedSkeleton)
+        out_image_loc = re.sub('.nii.gz',
+                               '_skeleton_zero_mean_in_warp.png',
+                               str(corrpMap.merged_4d_file))
+
+        mergedSkeleton.g_skel_zero.savefig(
+                out_image_loc,
+                facecolor='white', dpi=200)
+        plt.close()
+        print('\t- Values in the warpped maps for the zero voxels '
+              'in the skeleton')
+    else:
+        mergedSkeleton.df = pd.DataFrame({
+            'subject': corrpMap.matrix_df.index,
+            'mean': mergedSkeleton.subject_nonzero_means,
+            'skeleton_volume': mergedSkeleton.subject_nonzero_voxel_count,
+            'skeleton non_zero_std': mergedSkeleton.subject_nonzero_stds,
+            'group': group_list
+            })
+
+
+    # Figure that shows
+    # - skeleton group average as ahline
+    # - skeleton subject average as scatter dots
+    # - tests between subject averages between groups
+    plt.style.use('default')
+    SkeletonDir.get_group_figure(mergedSkeleton)
+    out_image_loc = re.sub('.nii.gz',
+                           '_skeleton_average_for_all_subjects.png',
+                           str(corrpMap.merged_4d_file))
+    mergedSkeleton.g.savefig(out_image_loc, facecolor='white', dpi=200)
+    plt.close()
+    print('\t- Average for the skeleton in each subjects')
+
+    SkeletonDir.get_subject_skeleton_volume_figure(mergedSkeleton)
+    out_image_loc = re.sub('.nii.gz',
+                           '_skeleton_volume_for_all_subjects.png',
+                           str(corrpMap.merged_4d_file))
+    mergedSkeleton.g_skel_vol.savefig(out_image_loc, facecolor='white', dpi=200)
+    plt.close()
+    print('\t- Volume for the skeleton in each subjects')
+
+
+
+    mergedSkeleton.data_shape = corrpMap.data_shape
+    mergedSkeleton.threshold = 0.01
+
+    # Figure that shows
+    # - skeleton alteration map
+    #   - 1 where all subject has the skeleton
+    #   - 0 where not all subject has the skeleton
+    # enlarge the alteration map
+    mergedSkeleton.skeleton_alteration_map = ndimage.binary_dilation(
+            mergedSkeleton.skeleton_alteration_map,
+            iterations=7).astype(mergedSkeleton.skeleton_alteration_map.dtype)
+
+    # mean of the skeleton across the subject
+    # out_image_loc = re.sub(
+        # '.nii.gz', f'_average_across_subjects.png',
+        # str(corrpMap.merged_4d_file))
+    # meanSkeletonFigure = nifti_snapshot.TbssFigure(
+        # image_files=[mergedSkeleton.merged_skeleton_mean_map],
+        # output_file=out_image_loc,
+        # cmap_list=['autumn'],
+        # cbar_titles=[
+            # f'Average {mergedSkeleton.modality} map across all subjects'],
+        # alpha_list=[1],
+        # title=f'Average {mergedSkeleton.modality} map across all subjects')
+    # meanSkeletonFigure.images_mask_out_the_skeleton()
+
+    # plot average map through `get_figure_enigma` function
+    # TODO SPLIT below back again
+    for map_data, name_out_png, title, vmin, vmax in zip(
+            [mergedSkeleton.merged_skeleton_mean_map,
+             mergedSkeleton.merged_skeleton_std_map,
+             mergedSkeleton.merged_skeleton_data_bin_sum,
+             mergedSkeleton.skeleton_alteration_map],
+            ['average', 'std', 'bin_sum', 'bin_sum_diff'],
+            ['All skeleton average map',
+             'All skeleton standard deviation map',
+             'Sum of binarized skeleton maps for all subjects',
+             'Highlighting variability among binarized skeleton maps'],
+            [0, 0, 0, 0],
+            ['free', 'free', 'free', 1]):
+        # set data input in order to use CorrpMap.get_figure_enigma function
+        mergedSkeleton.corrp_data = map_data
+        mergedSkeleton.type = name_out_png
+        plt.style.use('dark_background')
+
+        # try:
+        # print(name_out_png)
+        mergedSkeleton.vmin = map_data[mergedSkeleton.mask_data].min()
+        # print(f'vmin for merged skeleton: {mergedSkeleton.vmin}')
+        # except:
+            # pass
+        mergedSkeleton.vmax = vmax
+        out_image_loc = re.sub('.nii.gz', f'_{name_out_png}.png',
+                               str(corrpMap.merged_4d_file))
+        mergedSkeleton.out_image_loc = out_image_loc
+        mergedSkeleton.cbar_title = title
+        mergedSkeleton.title = title
+        CorrpMap.out_image_loc = out_image_loc
+        CorrpMap.title = title + f'\n{corrpMap.merged_4d_file}'
+        CorrpMap.get_figure_enigma(mergedSkeleton)
+
+        # # title
+        # print('\t- ' + title)
+        # mergedSkeleton.fig.suptitle(
+            # title
+            # y=0.95, fontsize=20)
+        # mergedSkeleton.fig.savefig(out_image_loc, facecolor='black', dpi=200)
+        plt.close()
+
+
+
+
+def run_skeleton_summary(merged_4d_file, skeleton_mask, tbss_all_loc, **kwargs):
     """ Make summary from corrpMap, using its merged_skeleton"""
     caselist = str(Path(tbss_all_loc) / 'log/caselist.txt')
 
@@ -567,6 +724,54 @@ def skeleton_summary(merged_4d_file, skeleton_mask, tbss_all_loc, **kwargs):
     plt.close()
     print('\t- Volume for the skeleton in each subjects')
 
+
+def get_skeleton_summary(args: object,
+        corrp_map_classes: List[object]) -> None:
+    '''skeleton summary'''
+    # skeleton summary parts
+    if args.skeleton_summary:
+        print_head('Running skeleton summary')
+        summarized_merged_maps = []
+        for corrpMap in corrp_map_classes:
+            if not hasattr(corrpMap, 'matrix_df'):
+                print('Please provide correct design matrix. The file is '
+                      'required to read in the group infromation.')
+                pass
+
+            elif corrpMap.modality == 'unknown':
+                print(f'The modality for {corrpMap.location} is unknown to '
+                      'the current version of randomise_summary. Please check '
+                      'the modality is in the list below.')
+                print('  ' + ' '.join(corrpMap.modality_full_list))
+
+            elif corrpMap.merged_4d_file == 'missing':
+                print(f'Merged 4d file for {corrpMap.location} is missing. '
+                      f'Please check there are all_{corrpMap.modality}'
+                      '_skeleton.nii.gz in the same directory.')
+
+            elif hasattr(corrpMap, 'merged_4d_file') and \
+                    corrpMap.merged_4d_file not in summarized_merged_maps and \
+                    corrpMap.merged_4d_file != 'missing' and args.tbss_all_loc:
+                print_head("Summarizing merged 4d file:"
+                           f"{corrpMap.merged_4d_file}")
+                warp_dir = str(Path(args.tbss_all_loc) / corrpMap.modality / 'warped')
+                print(warp_dir)
+                caselist = str(Path(args.tbss_all_loc) / 'log/caselist.txt')
+
+                skeleton_summary(corrpMap, warp_dir=warp_dir, caselist=caselist)
+                summarized_merged_maps.append(corrpMap.merged_4d_file)
+                print()
+
+            elif hasattr(corrpMap, 'merged_4d_file') and \
+                    corrpMap.merged_4d_file not in summarized_merged_maps and \
+                    corrpMap.merged_4d_file != 'missing':
+                print_head("Summarizing merged 4d file:"
+                           f"{corrpMap.merged_4d_file}")
+                skeleton_summary(corrpMap)
+                summarized_merged_maps.append(corrpMap.merged_4d_file)
+                print()
+
+
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -625,12 +830,12 @@ The most simple way to use the script is
     args = argparser.parse_args()
 
     if args.dir:
-        skeleton_summary(args.merged_4d_file,
+        run_skeleton_summary(args.merged_4d_file,
                          args.skeleton_mask,
                          args.tbss_all_loc,
                          directory=args.dir)
     else:
-        skeleton_summary(args.merged_4d_file, 
+        run_skeleton_summary(args.merged_4d_file, 
                          args.skeleton_mask,
                          args.tbss_all_loc,
                          matrix=args.matrix, 
