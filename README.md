@@ -185,7 +185,7 @@ Individual `*corrp*nii.gz` images, `design.mat` and `design.con` in
 different location could be specified with options.
 
 ```
-randomise_summary.py --constrat design.con --matrix design.mat
+randomise_summary.py --contrast design.con --matrix design.mat
 randomise_summary.py --input tbss_FA_corrp_tstat1.nii.gz
 ```
 
