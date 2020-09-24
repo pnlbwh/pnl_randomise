@@ -28,7 +28,7 @@ from pnl_randomise_utils import search_and_select_one
 
 # figures
 import sys
-sys.path.append('/data/pnl/kcho/PNLBWH/devel/nifti-snapshot')
+sys.path.append('/home/yoobin_kwak/software/nifti-snapshot')
 import nifti_snapshot.nifti_snapshot as nifti_snapshot
 
 print('Importing modules complete')
