@@ -7,6 +7,7 @@ import pandas as pd
 # os tools
 import re
 from pathlib import Path
+from scipy import ndimage
 
 # figure
 import seaborn as sns
@@ -637,9 +638,9 @@ def skeleton_summary(corrpMap, warp_dir=False, caselist=False):
         mergedSkeleton.out_image_loc = out_image_loc
         mergedSkeleton.cbar_title = title
         mergedSkeleton.title = title
-        CorrpMap.out_image_loc = out_image_loc
-        CorrpMap.title = title + f'\n{corrpMap.merged_4d_file}'
-        CorrpMap.get_figure_enigma(mergedSkeleton)
+        corrpMap.out_image_loc = out_image_loc
+        corrpMap.title = title + f'\n{corrpMap.merged_4d_file}'
+        corrpMap.get_figure_enigma(mergedSkeleton)
 
         # # title
         # print('\t- ' + title)

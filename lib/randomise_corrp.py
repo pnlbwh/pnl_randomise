@@ -11,6 +11,7 @@ from randomise_con_mat import RandomiseConMat
 from randomise_figure import CorrpMapFigure
 
 from os import environ
+import os,re
 from typing import Union, List, Tuple
 
 class CorrpMap(RandomiseConMat, CorrpMapFigure):
@@ -84,7 +85,7 @@ class CorrpMap(RandomiseConMat, CorrpMapFigure):
                                    'AD', 'ADt']
         try:
             self.modality = re.search(
-                '.*_(' + '|'.join(self.modality_full_list) + ')_',
+                '(' + '|'.join(self.modality_full_list) + ')_',
                 self.location.name).group(1)
         except AttributeError:
             print_head(f'No modality is detected in the file: {self.name}\n'
@@ -401,6 +402,8 @@ class CorrpMap(RandomiseConMat, CorrpMapFigure):
                 -thr {self.threshold} -bin \
                 {thresholded_map.name}'
         # TODO change below to kcho_util run
+        print('Command used')
+        print('\t'+re.sub('\s+', ' ', command))
         os.popen(command).read()
 
         # run atlas query from FSL
@@ -409,12 +412,17 @@ class CorrpMap(RandomiseConMat, CorrpMapFigure):
                 -m {thresholded_map.name} \
                 -a "JHU ICBM-DTI-81 White-Matter Labels"'
         text_label = os.popen(command).read()
+        print('\t'+re.sub('\s+', ' ', command))
+        print('\t\t' + re.sub('\n', '\n\t\t', text_label))
 
         # tract
         command = f'atlasquery \
                 -m {thresholded_map.name} \
                 -a "JHU White-Matter Tractography Atlas"'
         text_tract = os.popen(command).read()
+        print('\t'+re.sub('\s+', ' ', command))
+        print('\t\t' + re.sub('\n', '\n\t\t', text_tract))
+
 
         # Make pandas dataframe
         df_query_label = pd.read_csv(pd.compat.StringIO(text_label),
