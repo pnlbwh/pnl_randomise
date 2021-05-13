@@ -195,8 +195,8 @@ do
     command=`echo ${i} | cut -f2`
     title=${DIRNAME}_${BASENAME}_randParall_${num}
 
-    /hptc_cluster/lsf/8.0/linux2.6-glibc2.3-x86_64/bin/bsub \
-        -q medium \
+    /usr/share/lsf/9.1/linux2.6-glibc2.3-x86_64/bin/bsub \
+        -q normal \
         -J ${title} \
         -e ${lsf_out_dir}/${BASENAME}-${DIRNAME}-%J-%I.err \
         -o ${lsf_out_dir}/${BASENAME}-${DIRNAME}-%J-%I.out \
