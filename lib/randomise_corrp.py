@@ -95,7 +95,8 @@ class CorrpMap(RandomiseConMat, CorrpMapFigure):
         # Merged skeleton file
         # find merged skeleton file
         merged_skel_pattern = [f'*all*_{self.modality}[_.]*skel*nii.gz',
-                               f'*{self.modality}*merged*.nii.gz']
+                               f'*{self.modality}*merged*.nii.gz',
+                               f'all_{self.modality}_*']
 
         if 'merged_img_dir' in kwargs:
             self.merged_4d_file = search_and_select_one(
