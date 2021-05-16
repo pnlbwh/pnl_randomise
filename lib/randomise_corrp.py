@@ -11,7 +11,7 @@ from randomise_con_mat import RandomiseConMat
 from randomise_figure import CorrpMapFigure
 
 from os import environ
-import os,re
+import os, re, sys
 from typing import Union, List, Tuple
 
 class CorrpMap(RandomiseConMat, CorrpMapFigure):

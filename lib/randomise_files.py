@@ -10,7 +10,7 @@ def get_corrp_files_glob_string(location:Union[Path, str], glob_string:str) \
     corrp_ps = [str(x) for x in corrp_ps if 'SEED' not in x.name]
 
     if len(corrp_ps) == 0:
-        print(f'There is no corrected p-maps in {self.location}')
+        print(f'There is no corrected p-maps in the given location')
 
     return corrp_ps
 
@@ -23,7 +23,7 @@ def get_corrp_files(location:Union[Path, str]) -> List:
             if 'SEED' not in x.name and 'filled' not in x.name]
 
     if len(corrp_ps) == 0:
-        print(f'There is no corrected p-maps in {self.location}')
+        print(f'There is no corrected p-maps in the given location')
 
     return corrp_ps
 
