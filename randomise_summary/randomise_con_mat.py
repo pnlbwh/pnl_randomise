@@ -1,5 +1,5 @@
-from pnl_randomise_utils import np, pd
-from pnl_randomise_utils import print_head, print_df
+from randomise_summary.pnl_randomise_utils import np, pd
+from randomise_summary.pnl_randomise_utils import print_head, print_df
 
 
 class RandomiseConMat(object):

@@ -1,19 +1,15 @@
-#!/data/pnl/kcho/anaconda3/bin/python
+#!/usr/bin/env python
 
 print('Importing modules')
 
 import argparse
 import os
-# corrp file
-from randomise_corrp import run_randomise_summary_basics, run_atlas_query
-# figure
-from randomise_figure import create_figure
-# individual summary
-from randomise_individual_summary import get_individual_summary
-# skeleton 
-from skeleton_summary import get_skeleton_summary
-# html
-from randomise_summary_web import create_html
+
+from randomise_summary.randomise_corrp import run_randomise_summary_basics, run_atlas_query
+from randomise_summary.randomise_figure import create_figure
+from randomise_summary.randomise_individual_summary import get_individual_summary
+from randomise_summary.skeleton_summary import get_skeleton_summary
+from randomise_summary.randomise_summary_web import create_html
 
 # options
 import matplotlib as mpl
@@ -139,7 +135,7 @@ The most simple way to use the script is
 
     args = argparser.parse_args()
 
-    # get list of corrpMaps 
+    # get list of corrpMaps
     corrp_map_classes, df = run_randomise_summary_basics(args)
 
     # extra
@@ -155,5 +151,6 @@ The most simple way to use the script is
     # html summary
     if args.html_summary:
         create_html(corrp_map_classes, df, args)
-        print(f'HTML summary is saved in '
-              f"{corrp_map_classes[0].location.parent / 'randomise_summary.html'}")
+        output_html = corrp_map_classes[0].location.parent / \
+                      'randomise_summary.html'
+        print(f'HTML summary is saved in {output_html}')

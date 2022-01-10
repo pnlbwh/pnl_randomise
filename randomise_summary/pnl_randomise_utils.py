@@ -35,7 +35,7 @@ def get_nifti_img_data(img_loc):
     Returns:
         (nibabel img, numpy array of the data)
     """
-    img = nb.load(str(img_loc))
+    img = nb.load(img_loc)
     data = img.get_fdata()
     return img, data
 
